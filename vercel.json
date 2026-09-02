@@ -3,7 +3,7 @@
   "buildCommand": "npm run build:vercel",
   "outputDirectory": ".next",
   "installCommand": "npm install",
-  "regions": ["sin1"],
+  "regions": ["sgp1"],
   "headers": [
     {
       "source": "/(.*)",
