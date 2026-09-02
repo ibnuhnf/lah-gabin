@@ -1,8 +1,4 @@
 {
-  "framework": "nextjs",
-  "buildCommand": "npm run build:vercel",
-  "outputDirectory": ".next",
-  "installCommand": "npm install",
   "regions": ["sgp1"],
   "headers": [
     {
