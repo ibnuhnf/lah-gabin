@@ -11,8 +11,9 @@ VALUES (
 ON CONFLICT DO NOTHING;
 
 -- Default admin user (id will need sync with Supabase Auth)
-INSERT INTO users (email, name, role)
-VALUES ('admin@lahgabin.id', 'Admin Utama', 'admin')
+-- Default password: Admin123! (hashed with bcrypt cost 10)
+INSERT INTO users (email, password_hash, name, role)
+VALUES ('admin@lahgabin.id', '$2b$10$Tu71.aZdfnTLMdRk2PtTGOEKzDJUfVMGCFIyRbiE1/pQiAAQ6thyi', 'Admin Utama', 'admin')
 ON CONFLICT DO NOTHING;
 
 -- Expense categories
