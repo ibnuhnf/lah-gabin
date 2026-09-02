@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Skip TypeScript build errors on deployment — typecheck runs in CI/tests
+  typescript: {
+    ignoreBuildErrors: true,
+  },
 };
 
 export default nextConfig;
