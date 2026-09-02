@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-900: #0A2540;
+  --color-brand-800: #1B4D89;
+  --color-brand-700: #2E6DB5;
+  --color-brand-600: #3B82F6;
+  --color-brand-500: #60A5FA;
+  --color-brand-100: #DBEAFE;
+  --color-brand-50: #EFF6FF;
+
+  --color-accent-500: #F97316;
+  --color-accent-600: #EA580C;
+  --color-warning-500: #FACC15;
+  --color-success-500: #22C55E;
+  --color-danger-500: #EF4444;
+  --color-warning-amber: #F59E0B;
+
+  --color-neutral-50: #F9FAFB;
+  --color-neutral-100: #F3F4F6;
+  --color-neutral-300: #D1D5DB;
+  --color-neutral-500: #6B7280;
+  --color-neutral-700: #374151;
+  --color-neutral-900: #111827;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-heading: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+:root {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-heading: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.02em;
+}
+
+.btn-primary {
+  @apply bg-accent-500 text-white font-semibold px-6 py-3 rounded-xl
+         hover:bg-accent-600 active:scale-[0.98] transition-all duration-200
+         shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-secondary {
+  @apply bg-brand-600 text-white font-medium px-4 py-2 rounded-lg
+         hover:bg-brand-700 active:scale-[0.98] transition-all duration-200;
+}
+
+.card {
+  @apply bg-white rounded-2xl shadow-sm border border-neutral-100;
+}
+
+.badge-ready {
+  @apply bg-green-100 text-green-800 text-xs font-medium px-2.5 py-1 rounded-full;
+}
+
+.badge-po {
+  @apply bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-1 rounded-full;
+}
+
+.badge-pending {
+  @apply bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-1 rounded-full;
+}
+
+.badge-diproses {
+  @apply bg-brand-100 text-brand-800 text-xs font-medium px-2.5 py-1 rounded-full;
+}
+
+.badge-selesai {
+  @apply bg-green-100 text-green-800 text-xs font-medium px-2.5 py-1 rounded-full;
+}
+
+.badge-dibatalkan {
+  @apply bg-red-100 text-red-800 text-xs font-medium px-2.5 py-1 rounded-full;
+}
+
+.store-badge-open {
+  @apply bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full;
+}
+
+.store-badge-closed {
+  @apply bg-neutral-400 text-white text-xs font-bold px-3 py-1 rounded-full;
+}
+
+.admin-sidebar {
+  @apply bg-brand-900 text-white min-h-screen w-64 flex flex-col;
+}
+
+.admin-sidebar-link {
+  @apply flex items-center gap-3 px-4 py-3 text-blue-200
+         hover:bg-brand-800 hover:text-white rounded-lg mx-2 transition-colors;
+}
+
+.admin-sidebar-link-active {
+  @apply bg-brand-800 text-white;
+}
+
+.input-field {
+  @apply w-full px-4 py-3 border border-neutral-300 rounded-xl
+         focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent
+         placeholder:text-neutral-400 transition-all;
+}
+
+.table-header {
+  @apply bg-neutral-50 text-neutral-600 text-sm font-medium uppercase tracking-wider;
+}
+
+.table-row {
+  @apply border-b border-neutral-100 hover:bg-brand-50/50 transition-colors;
+}
+
+.kpi-card {
+  @apply bg-white rounded-2xl p-5 shadow-sm border border-neutral-100;
+}
+
+.qty-stepper-btn {
+  @apply w-9 h-9 flex items-center justify-center rounded-lg
+         bg-neutral-100 text-neutral-700 hover:bg-brand-100 hover:text-brand-700
+         transition-colors font-bold text-lg;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-neutral-100 rounded-full;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-neutral-300 rounded-full hover:bg-neutral-400;
+}
