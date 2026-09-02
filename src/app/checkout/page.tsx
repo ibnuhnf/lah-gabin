@@ -10,7 +10,7 @@ import { useStoreConfig } from '@/contexts/StoreContext';
 import { formatRupiah } from '@/lib/utils';
 import { validateVoucher, consumeVoucherQuota, generateInvoiceCode } from '@/lib/orders';
 import { normalizeIndonesianPhone, isValidIndonesianPhone } from '@/lib/whatsapp';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 import type { Voucher } from '@/types';
 
 export default function CheckoutPage() {

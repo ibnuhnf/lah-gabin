@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 import { Product } from '@/types';
 import CustomerPageWrapper from '@/components/customer/CustomerPageWrapper';
 import ProductCard from '@/components/customer/ProductCard';

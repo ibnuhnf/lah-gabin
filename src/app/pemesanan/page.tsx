@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Download, MessageCircle, Search, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import CustomerPageWrapper from '@/components/customer/CustomerPageWrapper';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 import { useStoreConfig } from '@/contexts/StoreContext';
 import { formatRupiah } from '@/lib/utils';
 import { buildWhatsAppURL } from '@/lib/whatsapp';
