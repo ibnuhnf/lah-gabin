@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Download, MessageCircle, Search, Clock, CheckCircle2, XCircle, Loader2, ArrowLeft } from 'lucide-react';
+import { Download, MessageCircle, Search, Clock, CheckCircle2, XCircle, Loader2, ArrowLeft, MapPin } from 'lucide-react';
 import CustomerPageWrapper from '@/components/customer/CustomerPageWrapper';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useStoreConfig } from '@/contexts/StoreContext';
@@ -118,11 +118,11 @@ function OrderTrackingContent() {
       <div className="flex items-center gap-3 mb-6">
         <Link
           href="/"
-          className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 flex items-center justify-center hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+          className="w-8 h-8 rounded-full bg-slate-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-neutral-700 transition-colors"
         >
           <ArrowLeft size={16} />
         </Link>
-        <h1 className="font-heading font-bold text-xl text-neutral-900 dark:text-white">
+        <h1 className="font-heading font-extrabold text-xl text-neutral-900 dark:text-white">
           Lacak Pesanan
         </h1>
       </div>
@@ -136,7 +136,7 @@ function OrderTrackingContent() {
             placeholder="Masukkan kode invoice (mis. LG-20260901-ABCD)"
             value={invoiceInput}
             onChange={(e) => setInvoiceInput(e.target.value.toUpperCase())}
-            className="input-field pl-9 font-mono uppercase text-xs"
+            className="input-field pl-9 font-mono uppercase text-xs font-bold"
             onKeyDown={(e) => e.key === 'Enter' && fetchOrder(invoiceInput)}
           />
         </div>
@@ -151,7 +151,7 @@ function OrderTrackingContent() {
 
       {/* Not Found */}
       {notFound && !order && (
-        <div className="card p-8 text-center text-neutral-500 dark:text-neutral-400 text-sm">
+        <div className="card p-8 text-center text-neutral-500 dark:text-neutral-400 text-sm font-medium">
           Pesanan dengan kode <strong>{invoiceInput}</strong> tidak ditemukan.
         </div>
       )}
@@ -160,29 +160,39 @@ function OrderTrackingContent() {
       {order && statusInfo && (
         <div className="space-y-4">
           {/* Status Badge */}
-          <div className={`p-4 rounded-2xl border flex items-center gap-3.5 ${statusInfo.color}`}>
+          <div className={`p-4 rounded-3xl border flex items-center gap-3.5 ${statusInfo.color}`}>
             <StatusIcon
               size={22}
               className={order.status === 'DIPROSES' || order.status === 'DITERIMA_PROSES' ? 'animate-spin' : ''}
             />
             <div>
               <p className="font-heading font-bold text-base">{statusInfo.label}</p>
-              <p className="text-xs font-mono opacity-80">{order.invoice_code}</p>
+              <p className="text-xs font-mono font-bold opacity-90">{order.invoice_code}</p>
             </div>
           </div>
 
           {/* Order Detail */}
           <div className="card p-4 text-sm space-y-2.5">
             <div className="flex justify-between">
-              <span className="text-neutral-500 dark:text-neutral-400 text-xs">Pemesan</span>
-              <span className="font-semibold text-neutral-900 dark:text-white text-xs">{order.customer_name}</span>
+              <span className="text-neutral-500 dark:text-neutral-400 text-xs font-medium">Pemesan</span>
+              <span className="font-bold text-neutral-900 dark:text-white text-xs">{order.customer_name}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-neutral-500 dark:text-neutral-400 text-xs">WhatsApp</span>
-              <span className="font-semibold text-neutral-900 dark:text-white text-xs">{order.customer_wa}</span>
+              <span className="text-neutral-500 dark:text-neutral-400 text-xs font-medium">WhatsApp</span>
+              <span className="font-bold text-neutral-900 dark:text-white text-xs">{order.customer_wa}</span>
             </div>
+            {order.customer_address && (
+              <div className="flex justify-between items-start">
+                <span className="text-neutral-500 dark:text-neutral-400 text-xs font-medium flex items-center gap-1">
+                  <MapPin size={12} /> Alamat
+                </span>
+                <span className="font-semibold text-neutral-900 dark:text-white text-xs text-right max-w-[65%]">
+                  {order.customer_address}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between">
-              <span className="text-neutral-500 dark:text-neutral-400 text-xs">Waktu Pemesanan</span>
+              <span className="text-neutral-500 dark:text-neutral-400 text-xs font-medium">Waktu Pemesanan</span>
               <span className="font-medium text-neutral-800 dark:text-neutral-200 text-xs">
                 {new Date(order.created_at).toLocaleDateString('id-ID', {
                   day: 'numeric',
@@ -195,8 +205,8 @@ function OrderTrackingContent() {
             </div>
             {order.customer_notes && (
               <div className="flex justify-between border-t border-neutral-100 dark:border-neutral-800 pt-2">
-                <span className="text-neutral-500 dark:text-neutral-400 text-xs">Catatan</span>
-                <span className="text-xs text-neutral-800 dark:text-neutral-200 text-right max-w-[65%]">
+                <span className="text-neutral-500 dark:text-neutral-400 text-xs font-medium">Catatan</span>
+                <span className="text-xs text-neutral-800 dark:text-neutral-200 text-right max-w-[65%] font-medium">
                   {order.customer_notes}
                 </span>
               </div>
@@ -205,7 +215,7 @@ function OrderTrackingContent() {
 
           {/* Items */}
           <div className="card p-4">
-            <h3 className="font-heading font-semibold text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-2.5">
+            <h3 className="font-heading font-bold text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-2.5">
               Rincian Produk
             </h3>
             <div className="space-y-1.5">
@@ -214,10 +224,10 @@ function OrderTrackingContent() {
                   key={item.id || i}
                   className="flex justify-between text-xs py-1 border-b border-neutral-100 dark:border-neutral-800 last:border-0"
                 >
-                  <span className="text-neutral-700 dark:text-neutral-300 font-medium">
+                  <span className="text-neutral-700 dark:text-neutral-300 font-semibold">
                     {item.product_name} <span className="text-neutral-400 font-normal">x{item.quantity}</span>
                   </span>
-                  <span className="font-semibold text-neutral-900 dark:text-white">
+                  <span className="font-bold text-neutral-900 dark:text-white">
                     {formatRupiah(item.subtotal)}
                   </span>
                 </div>
@@ -225,15 +235,21 @@ function OrderTrackingContent() {
             </div>
 
             <div className="border-t border-neutral-100 dark:border-neutral-800 mt-3 pt-2.5 space-y-1">
+              {order.delivery_fee ? (
+                <div className="flex justify-between text-xs text-neutral-600 dark:text-neutral-400 font-medium">
+                  <span>Ongkir</span>
+                  <span className="font-bold text-neutral-900 dark:text-white">{formatRupiah(order.delivery_fee)}</span>
+                </div>
+              ) : null}
               {order.discount_amount > 0 && (
-                <div className="flex justify-between text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                <div className="flex justify-between text-xs text-emerald-600 dark:text-emerald-400 font-bold">
                   <span>Diskon Kupon</span>
                   <span>- {formatRupiah(order.discount_amount)}</span>
                 </div>
               )}
-              <div className="flex justify-between font-bold text-sm text-neutral-900 dark:text-white pt-1">
+              <div className="flex justify-between font-heading font-bold text-sm text-neutral-900 dark:text-white pt-1">
                 <span>Total Pembayaran</span>
-                <span className="text-accent-500 font-extrabold">{formatRupiah(order.final_amount)}</span>
+                <span className="text-blue-600 font-extrabold">{formatRupiah(order.final_amount)}</span>
               </div>
             </div>
           </div>
@@ -241,13 +257,13 @@ function OrderTrackingContent() {
           {/* Actions for Customer */}
           {order.status === 'PENDING_APPROVAL' && (
             <div className="space-y-2">
-              <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 text-xs text-amber-800 dark:text-amber-300 text-center font-medium">
+              <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 text-xs text-amber-800 dark:text-amber-300 text-center font-semibold">
                 Kirim konfirmasi ke WhatsApp admin untuk memproses pesanan dan verifikasi pembayaran.
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={handleDownloadPDF}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-2xl border border-neutral-300 dark:border-neutral-700 text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                  className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-2xl border border-slate-200 dark:border-neutral-700 text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
                 >
                   <Download size={15} /> Unduh PDF
                 </button>
@@ -264,7 +280,7 @@ function OrderTrackingContent() {
       )}
 
       {!order && !notFound && !loading && !initialCode && (
-        <div className="card p-8 text-center text-neutral-400 text-xs">
+        <div className="card p-8 text-center text-neutral-400 text-xs font-medium">
           Masukkan kode invoice yang tertera di bukti pemesanan untuk melihat status pesanan.
         </div>
       )}

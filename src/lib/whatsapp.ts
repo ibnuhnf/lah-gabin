@@ -7,20 +7,23 @@ export function buildWhatsAppURL(order: Order, adminWa: string): string {
     .join('\n');
 
   const lines = [
-    `Halo Admin Lah Gabin! 🧊`,
+    `Halo Admin Lah Gabin!`,
     ``,
     `Saya ingin konfirmasi pesanan:`,
-    `📋 Kode Invoice: *${order.invoice_code}*`,
-    `👤 Nama: ${order.customer_name}`,
+    `*Kode Invoice:* ${order.invoice_code}`,
+    `*Nama:* ${order.customer_name}`,
+    `*Nomor WA:* ${order.customer_wa}`,
+    order.customer_address ? `*Alamat Pengiriman:* ${order.customer_address}` : '',
     ``,
-    `📦 Rincian Pesanan:`,
+    `*Rincian Pesanan:*`,
     items,
     ``,
-    `💰 Total: *Rp ${order.final_amount.toLocaleString('id-ID')}*`,
-    order.discount_amount > 0 ? `🎫 Diskon: Rp ${order.discount_amount.toLocaleString('id-ID')}` : '',
-    order.customer_notes ? `📝 Catatan: ${order.customer_notes}` : '',
+    order.delivery_fee ? `*Ongkir:* Rp ${order.delivery_fee.toLocaleString('id-ID')}` : '',
+    order.discount_amount > 0 ? `*Diskon:* Rp ${order.discount_amount.toLocaleString('id-ID')}` : '',
+    `*Total Pembayaran:* *Rp ${order.final_amount.toLocaleString('id-ID')}*`,
+    order.customer_notes ? `*Catatan:* ${order.customer_notes}` : '',
     ``,
-    `Mohon di-ACC ya. Saya akan lampirkan file PDF invoice secara manual. Terima kasih! 🙏`,
+    `Mohon segera diproses ya. Terima kasih!`,
   ]
     .filter(Boolean)
     .join('\n');

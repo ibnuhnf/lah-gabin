@@ -13,6 +13,18 @@ import { normalizeIndonesianPhone, isValidIndonesianPhone } from '@/lib/whatsapp
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import type { Voucher } from '@/types';
 
+type DeliveryZone = 'LUAR_PERUM' | 'DALAM_PERUM';
+
+const DELIVERY_FEE: Record<DeliveryZone, number> = {
+  LUAR_PERUM: 3000,
+  DALAM_PERUM: 1000,
+};
+
+const ZONE_LABELS: Record<DeliveryZone, string> = {
+  LUAR_PERUM: 'Luar Perum / Onkir Standar',
+  DALAM_PERUM: 'Daerah Perum / Onkir Hemat',
+};
+
 export default function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart();
   const { config } = useStoreConfig();
@@ -20,6 +32,8 @@ export default function CheckoutPage() {
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [zone, setZone] = useState<DeliveryZone>('LUAR_PERUM');
   const [notes, setNotes] = useState('');
   const [voucherCode, setVoucherCode] = useState('');
   const [appliedVoucher, setAppliedVoucher] = useState<{ voucher: Voucher; discount: number } | null>(null);
@@ -28,8 +42,9 @@ export default function CheckoutPage() {
   const [formError, setFormError] = useState('');
   const [isPending, startTransition] = useTransition();
 
+  const deliveryFee = DELIVERY_FEE[zone];
   const discountAmount = appliedVoucher?.discount ?? 0;
-  const finalAmount = Math.max(0, subtotal - discountAmount);
+  const finalAmount = Math.max(0, subtotal + deliveryFee - discountAmount);
 
   async function handleApplyVoucher() {
     if (!voucherCode.trim()) return;
@@ -58,6 +73,10 @@ export default function CheckoutPage() {
       setFormError('Nomor WhatsApp tidak valid (format 08xx atau +62xx).');
       return;
     }
+    if (!address.trim()) {
+      setFormError('Alamat pengiriman wajib diisi.');
+      return;
+    }
     if (items.length === 0) {
       setFormError('Keranjang belanja kosong.');
       return;
@@ -69,6 +88,7 @@ export default function CheckoutPage() {
         const normalizedPhone = normalizeIndonesianPhone(phone);
         const orderId = crypto.randomUUID();
         const createdAt = new Date().toISOString();
+        const fullAddress = `${address.trim()} (${ZONE_LABELS[zone]})`;
 
         const orderData = {
           id: orderId,
@@ -76,6 +96,9 @@ export default function CheckoutPage() {
           customer_name: name.trim(),
           customer_wa: normalizedPhone,
           customer_notes: notes.trim() || null,
+          customer_address: fullAddress,
+          delivery_zone: zone,
+          delivery_fee: deliveryFee,
           total_amount: subtotal,
           discount_amount: discountAmount,
           final_amount: finalAmount,
@@ -145,7 +168,7 @@ export default function CheckoutPage() {
     return (
       <CustomerPageWrapper>
         <div className="max-w-xl mx-auto px-4 py-16 text-center">
-          <p className="text-neutral-500 dark:text-neutral-400 mb-4 text-sm">
+          <p className="text-neutral-500 dark:text-neutral-400 mb-4 text-sm font-medium">
             Keranjang belanja masih kosong.
           </p>
           <Link href="/" className="btn-primary inline-flex text-sm">
@@ -162,11 +185,11 @@ export default function CheckoutPage() {
         <div className="flex items-center gap-3 mb-6">
           <Link
             href="/keranjang"
-            className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 flex items-center justify-center hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+            className="w-8 h-8 rounded-full bg-slate-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-neutral-700 transition-colors"
           >
             <ArrowLeft size={16} />
           </Link>
-          <h1 className="font-heading font-bold text-xl text-neutral-900 dark:text-white">
+          <h1 className="font-heading font-extrabold text-xl text-neutral-900 dark:text-white">
             Konfirmasi Pesanan
           </h1>
         </div>
@@ -174,7 +197,7 @@ export default function CheckoutPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Summary Card */}
           <div className="card p-4">
-            <h2 className="font-heading font-semibold text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">
+            <h2 className="font-heading font-bold text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">
               Ringkasan Pesanan
             </h2>
             <div className="space-y-2">
@@ -184,14 +207,14 @@ export default function CheckoutPage() {
                   className="flex justify-between items-center text-sm py-1.5 border-b border-neutral-100 dark:border-neutral-800 last:border-0"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-neutral-900 dark:text-white text-xs w-6 text-center py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800">
+                    <span className="font-bold text-neutral-900 dark:text-white text-xs w-6 text-center py-0.5 rounded-md bg-slate-100 dark:bg-neutral-800">
                       {item.quantity}x
                     </span>
-                    <span className="text-neutral-800 dark:text-neutral-200 text-sm font-medium">
+                    <span className="text-neutral-800 dark:text-neutral-200 text-sm font-semibold">
                       {item.product.name}
                     </span>
                   </div>
-                  <span className="font-semibold text-neutral-900 dark:text-white text-sm">
+                  <span className="font-bold text-neutral-900 dark:text-white text-sm">
                     {formatRupiah(item.activePrice * item.quantity)}
                   </span>
                 </div>
@@ -201,11 +224,11 @@ export default function CheckoutPage() {
 
           {/* Customer Data */}
           <div className="card p-4 space-y-3.5">
-            <h2 className="font-heading font-semibold text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+            <h2 className="font-heading font-bold text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
               Data Pemesan
             </h2>
             <div>
-              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
                 Nama Lengkap *
               </label>
               <input
@@ -213,12 +236,12 @@ export default function CheckoutPage() {
                 placeholder="Nama Anda"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="input-field"
+                className="input-field font-medium"
                 required
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
                 Nomor WhatsApp Aktif *
               </label>
               <input
@@ -226,22 +249,77 @@ export default function CheckoutPage() {
                 placeholder="0812xxxxxxxx"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="input-field"
+                className="input-field font-medium"
                 required
               />
-              <p className="text-[11px] text-neutral-400 mt-1">
+              <p className="text-[11px] text-neutral-400 mt-1 font-medium">
                 Digunakan untuk konfirmasi pesanan dan bukti transaksi.
               </p>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                Alamat Pengiriman *
+              </label>
+              <textarea
+                placeholder="Contoh: Jl. Mawar No. 5, samping warung Pak Rudi"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                className="input-field resize-none font-medium"
+                rows={2}
+                required
+              />
+            </div>
+
+            {/* Delivery Zone Toggle */}
+            <div>
+              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-2">
+                Zona Pengiriman *
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setZone('LUAR_PERUM')}
+                  className={`p-3 rounded-2xl border-2 text-left transition-all ${
+                    zone === 'LUAR_PERUM'
+                      ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/30'
+                      : 'border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/50'
+                  }`}
+                >
+                  <p className={`font-heading font-bold text-xs ${zone === 'LUAR_PERUM' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-800 dark:text-neutral-200'}`}>
+                    Luar Perum
+                  </p>
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 font-medium">
+                    Onkir {formatRupiah(DELIVERY_FEE.LUAR_PERUM)}
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZone('DALAM_PERUM')}
+                  className={`p-3 rounded-2xl border-2 text-left transition-all ${
+                    zone === 'DALAM_PERUM'
+                      ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/30'
+                      : 'border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/50'
+                  }`}
+                >
+                  <p className={`font-heading font-bold text-xs ${zone === 'DALAM_PERUM' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-800 dark:text-neutral-200'}`}>
+                    Daerah Perum
+                  </p>
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 font-medium">
+                    Onkir {formatRupiah(DELIVERY_FEE.DALAM_PERUM)}
+                  </p>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
                 Catatan Khusus (opsional)
               </label>
               <textarea
                 placeholder="Contoh: Titip di pos satpam, request sendok, dll."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="input-field resize-none"
+                className="input-field resize-none font-medium"
                 rows={2}
               />
             </div>
@@ -249,7 +327,7 @@ export default function CheckoutPage() {
 
           {/* Voucher */}
           <div className="card p-4">
-            <h2 className="font-heading font-semibold text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+            <h2 className="font-heading font-bold text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
               <Tag size={13} /> Kupon / Voucher
             </h2>
             <div className="flex gap-2">
@@ -258,7 +336,7 @@ export default function CheckoutPage() {
                 placeholder="KODE VOUCHER"
                 value={voucherCode}
                 onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
-                className="input-field font-mono uppercase text-xs flex-1"
+                className="input-field font-mono uppercase text-xs flex-1 font-bold"
                 disabled={!!appliedVoucher}
               />
               {appliedVoucher ? (
@@ -269,7 +347,7 @@ export default function CheckoutPage() {
                     setVoucherMsg('');
                     setVoucherCode('');
                   }}
-                  className="px-3.5 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 text-xs font-semibold text-neutral-600 dark:text-neutral-300"
+                  className="px-3.5 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-300"
                 >
                   Hapus
                 </button>
@@ -286,8 +364,8 @@ export default function CheckoutPage() {
             </div>
             {voucherMsg && (
               <p
-                className={`text-xs mt-2 ${
-                  appliedVoucher ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-rose-500'
+                className={`text-xs mt-2 font-medium ${
+                  appliedVoucher ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-rose-500'
                 }`}
               >
                 {voucherMsg}
@@ -298,23 +376,27 @@ export default function CheckoutPage() {
           {/* Payment & Total */}
           <div className="card p-4 space-y-2">
             <div className="flex justify-between text-sm text-neutral-600 dark:text-neutral-400">
-              <span>Subtotal</span>
-              <span className="font-medium text-neutral-900 dark:text-white">{formatRupiah(subtotal)}</span>
+              <span className="font-medium">Subtotal</span>
+              <span className="font-bold text-neutral-900 dark:text-white">{formatRupiah(subtotal)}</span>
+            </div>
+            <div className="flex justify-between text-sm text-neutral-600 dark:text-neutral-400">
+              <span className="font-medium">Ongkir ({ZONE_LABELS[zone]})</span>
+              <span className="font-bold text-neutral-900 dark:text-white">{formatRupiah(deliveryFee)}</span>
             </div>
             {discountAmount > 0 && (
-              <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400 font-semibold">
+              <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400 font-bold">
                 <span>Diskon Kupon</span>
                 <span>- {formatRupiah(discountAmount)}</span>
               </div>
             )}
             <div className="flex justify-between items-center font-heading font-bold text-base border-t border-neutral-100 dark:border-neutral-800 pt-3 mt-2">
               <span className="text-neutral-900 dark:text-white">Total Pembayaran</span>
-              <span className="text-accent-500 font-extrabold text-lg">{formatRupiah(finalAmount)}</span>
+              <span className="text-blue-600 font-extrabold text-lg">{formatRupiah(finalAmount)}</span>
             </div>
           </div>
 
           {formError && (
-            <div className="bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 text-xs p-3 rounded-2xl text-center font-medium">
+            <div className="bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 text-xs p-3 rounded-2xl text-center font-bold">
               {formError}
             </div>
           )}
@@ -322,12 +404,12 @@ export default function CheckoutPage() {
           <button
             type="submit"
             disabled={isPending}
-            className="w-full btn-primary text-sm py-3 font-semibold shadow-md"
+            className="w-full btn-primary text-sm py-3 font-bold shadow-lg"
           >
             {isPending ? 'Memproses Pesanan...' : 'Kirim Pesanan Sekarang'}
           </button>
 
-          <div className="flex items-center justify-center gap-1.5 text-[11px] text-neutral-400 text-center pt-1">
+          <div className="flex items-center justify-center gap-1.5 text-[11px] text-neutral-400 text-center pt-1 font-medium">
             <ShieldCheck size={13} />
             <span>Transaksi aman & langsung terhubung ke WhatsApp Admin</span>
           </div>
