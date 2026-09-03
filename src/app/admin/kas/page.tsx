@@ -27,18 +27,10 @@ interface CashTransaction {
   time: string;
 }
 
-const INITIAL_TRANSACTIONS: CashTransaction[] = [
-  { id: '1', type: 'IN', amount: 35000, category: 'PENJUALAN_ONLINE', description: 'Penjualan LG-20260902-A1B2', time: '2026-09-02 10:35' },
-  { id: '2', type: 'IN', amount: 22000, category: 'PENJUALAN_POS', description: 'Transaksi Kasir Walk-in', time: '2026-09-02 09:15' },
-  { id: '3', type: 'OUT', amount: 350000, category: 'BAHAN_BAKU', description: 'Pembelian bahan baku mingguan', time: '2026-09-01 16:00' },
-  { id: '4', type: 'IN', amount: 18000, category: 'PENJUALAN_ONLINE', description: 'Penjualan LG-20260902-C3D4', time: '2026-09-01 14:45' },
-  { id: '5', type: 'OUT', amount: 85000, category: 'KEMASAN', description: 'Pembelian plastik klip + label', time: '2026-09-01 12:30' },
-  { id: '6', type: 'IN', amount: 550000, category: 'PENJUALAN_ONLINE', description: 'Total Penjualan Online Agustus', time: '2026-08-28 20:00' },
-  { id: '7', type: 'OUT', amount: 200000, category: 'OPERASIONAL', description: 'Biaya Gas & Listrik Agustus', time: '2026-08-25 10:00' },
-  { id: '8', type: 'IN', amount: 120000, category: 'PENJUALAN_POS', description: 'Event CFD Agustus', time: '2026-08-15 11:30' },
-];
+// Reset ke 0: transaksi awal kosong
+const INITIAL_TRANSACTIONS: CashTransaction[] = [];
 
-const INITIAL_BALANCE = 1850000;
+const INITIAL_BALANCE = 0;
 
 export default function AdminCashPage() {
   const [transactions, setTransactions] = useState<CashTransaction[]>(INITIAL_TRANSACTIONS);

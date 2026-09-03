@@ -89,22 +89,15 @@ export default function AdminDashboardPage() {
   const totalTransactions = completedOrders.length;
   const hppTotal = Math.round(omzet * 0.35);
   const labaKotor = omzet - hppTotal;
-  const labaBersih = Math.max(0, labaKotor - (period === 'today' ? 125000 : 800000));
-  const saldoKas = omzet > 0 ? omzet + 1500000 : period === 'today' ? 1850000 : 8750000;
-  const totalPengeluaran = periodOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0) + (period === 'today' ? 125000 : 3500000);
+  const labaBersih = Math.max(0, labaKotor);
+  const saldoKas = omzet;
+  const totalPengeluaran = periodOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
 
   const activeQueue = orders.filter(
     (o) => o.status === 'PENDING_APPROVAL' || o.status === 'DITERIMA_PROSES' || o.status === 'DIPROSES'
   );
 
-  const salesByProduct: Record<string, { qty: number; omzet: number }> = {
-    'Es Gabin Coklat': { qty: 42, omzet: 210000 },
-    'Es Gabin Keju': { qty: 38, omzet: 209000 },
-    'Es Gabin Original': { qty: 35, omzet: 140000 },
-    'Es Gabin Susu': { qty: 29, omzet: 145000 },
-    'Es Gabin Tiramisu': { qty: 15, omzet: 105000 },
-    'Es Gabin Oreo': { qty: 12, omzet: 72000 },
-  };
+  const salesByProduct: Record<string, { qty: number; omzet: number }> = {};
 
   orders.forEach((ord) => {
     if (ord.status === 'SELESAI' || ord.status === 'DITERIMA_PROSES' || ord.status === 'DIPROSES') {
