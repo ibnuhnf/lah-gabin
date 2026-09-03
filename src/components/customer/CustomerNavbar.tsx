@@ -13,11 +13,11 @@ export default function CustomerNavbar() {
   const isOpen = Boolean(config?.is_open);
 
   return (
-    <header className="sticky top-0 z-50 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-2xl border-b border-neutral-200/80 dark:border-neutral-800 transition-colors">
+    <header className="sticky top-0 z-50 bg-white/85 dark:bg-neutral-950/85 backdrop-blur-2xl border-b border-slate-200/70 dark:border-neutral-800 transition-colors">
       <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-7 h-7 rounded-xl bg-accent-500 flex items-center justify-center text-white font-heading font-bold text-xs shadow-xs group-hover:scale-105 transition-transform">
+          <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center text-white font-heading font-bold text-xs shadow-md shadow-blue-500/30 group-hover:scale-105 transition-transform">
             LG
           </div>
           <span className="font-heading font-bold text-sm tracking-tight text-neutral-900 dark:text-white">
@@ -43,7 +43,7 @@ export default function CustomerNavbar() {
           <button
             onClick={toggleTheme}
             aria-label="Ganti Tema"
-            className="w-8 h-8 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 flex items-center justify-center transition-all active:scale-95"
+            className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-slate-200 dark:hover:bg-neutral-700 flex items-center justify-center transition-all active:scale-95"
             title={theme === 'dark' ? 'Mode Terang' : 'Mode Gelap'}
           >
             {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
@@ -52,12 +52,12 @@ export default function CustomerNavbar() {
           {/* Cart Icon */}
           <Link
             href="/keranjang"
-            className="relative w-8 h-8 rounded-xl bg-accent-500 hover:bg-accent-600 text-white flex items-center justify-center shadow-xs transition-all active:scale-95"
+            className="relative w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white flex items-center justify-center shadow-md shadow-blue-500/25 transition-all active:scale-95"
             aria-label="Keranjang Belanja"
           >
             <ShoppingBag size={15} />
             {totalItems > 0 && (
-              <span className="absolute -top-1 -right-1 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
+              <span className="absolute -top-1 -right-1 bg-white dark:bg-white text-blue-600 text-[10px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center shadow-sm ring-1 ring-blue-100">
                 {totalItems > 9 ? '9+' : totalItems}
               </span>
             )}

@@ -37,9 +37,9 @@ export default function ProductCard({ product }: ProductCardProps) {
   };
 
   return (
-    <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 overflow-hidden flex flex-col hover:border-neutral-300 dark:hover:border-neutral-700 transition-all duration-150 group">
+    <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-slate-200/80 dark:border-neutral-800/80 overflow-hidden flex flex-col hover:shadow-lg hover:shadow-blue-500/5 dark:hover:border-neutral-700 transition-all duration-200 group">
       {/* Image Area */}
-      <div className="relative aspect-square bg-neutral-100 dark:bg-neutral-800/80 overflow-hidden flex items-center justify-center">
+      <div className="relative aspect-square bg-slate-100 dark:bg-neutral-800/80 overflow-hidden flex items-center justify-center">
         {imgSrc && imgSrc !== '/placeholder-gabin.jpg' ? (
           <img
             src={imgSrc}
@@ -48,16 +48,16 @@ export default function ProductCard({ product }: ProductCardProps) {
             loading="lazy"
           />
         ) : (
-          <div className="flex flex-col items-center justify-center text-neutral-400 dark:text-neutral-500 gap-1">
+          <div className="flex flex-col items-center justify-center text-slate-400 dark:text-neutral-500 gap-1">
             <ImageIcon size={28} strokeWidth={1.5} />
-            <span className="text-[10px] uppercase font-semibold tracking-wider">Lah Gabin</span>
+            <span className="text-[10px] uppercase font-bold tracking-wider">Lah Gabin</span>
           </div>
         )}
 
         {/* Status Badge */}
         {stockLabel !== 'inactive' && (
           <span
-            className={`absolute top-2.5 left-2.5 text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider backdrop-blur-sm ${
+            className={`absolute top-2.5 left-2.5 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider backdrop-blur-md shadow-xs ${
               stockLabel === 'ready'
                 ? 'bg-emerald-600/90 text-white'
                 : 'bg-amber-600/90 text-white'
@@ -69,16 +69,16 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Promo Tag */}
         {hasDiscount && (
-          <span className="absolute top-2.5 right-2.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-600 text-white shadow-xs">
+          <span className="absolute top-2.5 right-2.5 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-600 text-white shadow-sm">
             PROMO
           </span>
         )}
       </div>
 
       {/* Info Area */}
-      <div className="p-3 flex flex-col flex-1 gap-1.5">
+      <div className="p-3.5 flex flex-col flex-1 gap-1.5">
         <div>
-          <h3 className="font-heading font-semibold text-xs sm:text-sm text-neutral-900 dark:text-white line-clamp-1 tracking-tight">
+          <h3 className="font-heading font-bold text-xs sm:text-sm text-neutral-900 dark:text-white line-clamp-1 tracking-tight">
             {product.name}
           </h3>
           <p className="text-[11px] text-neutral-500 dark:text-neutral-400 line-clamp-2 leading-relaxed mt-0.5">
@@ -86,9 +86,9 @@ export default function ProductCard({ product }: ProductCardProps) {
           </p>
         </div>
 
-        <div className="mt-auto pt-2 flex items-center justify-between gap-1 border-t border-neutral-100 dark:border-neutral-800/80">
+        <div className="mt-auto pt-2.5 flex items-center justify-between gap-1 border-t border-slate-100 dark:border-neutral-800/80">
           <div className="flex flex-col leading-tight">
-            <span className="font-heading font-bold text-neutral-900 dark:text-white text-sm">
+            <span className="font-heading font-extrabold text-neutral-900 dark:text-white text-sm">
               {formatRupiah(price)}
             </span>
             {hasDiscount && (
@@ -101,9 +101,11 @@ export default function ProductCard({ product }: ProductCardProps) {
           <button
             disabled={!canOrder}
             onClick={handleAdd}
-            className={`w-8 h-8 rounded-xl text-white flex items-center justify-center transition-all active:scale-90 ${
-              adding ? 'bg-emerald-600 scale-105' : 'bg-accent-500 hover:bg-accent-600'
-            } ${!canOrder ? 'opacity-30 cursor-not-allowed bg-neutral-400' : ''}`}
+            className={`w-8 h-8 rounded-xl text-white flex items-center justify-center transition-all active:scale-90 shadow-md ${
+              adding
+                ? 'bg-emerald-600 scale-105'
+                : 'bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 shadow-blue-500/20'
+            } ${!canOrder ? 'opacity-30 cursor-not-allowed bg-neutral-400 shadow-none' : ''}`}
             title={isShopClosed ? 'Toko tutup' : canOrder ? 'Tambah' : 'Stok habis'}
             aria-label="Tambah ke Keranjang"
           >

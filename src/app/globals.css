@@ -3,7 +3,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-brand-950: #090D14;
+  --color-brand-950: #0B132B;
   --color-brand-900: #0F172A;
   --color-brand-800: #1E293B;
   --color-brand-700: #334155;
@@ -12,23 +12,24 @@
   --color-brand-100: #E0E7FF;
   --color-brand-50: #F8FAFC;
 
-  --color-accent-500: #EA580C;
-  --color-accent-600: #C2410C;
+  --color-accent-500: #2563EB;
+  --color-accent-600: #1D4ED8;
+  --color-accent-400: #60A5FA;
   --color-warning-500: #EAB308;
-  --color-success-500: #16A34A;
-  --color-danger-500: #DC2626;
+  --color-success-500: #10B981;
+  --color-danger-500: #EF4444;
 
-  --color-neutral-50: #FAFAFA;
-  --color-neutral-100: #F4F4F5;
-  --color-neutral-200: #E4E4E7;
-  --color-neutral-300: #D4D4D8;
-  --color-neutral-400: #A1A1AA;
-  --color-neutral-500: #71717A;
-  --color-neutral-600: #52525B;
-  --color-neutral-700: #3F3F46;
-  --color-neutral-800: #27272A;
-  --color-neutral-900: #18181B;
-  --color-neutral-950: #09090B;
+  --color-neutral-50: #F8FAFC;
+  --color-neutral-100: #F1F5F9;
+  --color-neutral-200: #E2E8F0;
+  --color-neutral-300: #CBD5E1;
+  --color-neutral-400: #94A3B8;
+  --color-neutral-500: #64748B;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1E293B;
+  --color-neutral-900: #0F172A;
+  --color-neutral-950: #020617;
 
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", "Segoe UI", Roboto, sans-serif;
   --font-heading: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "Segoe UI", Roboto, sans-serif;
@@ -54,13 +55,13 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: -0.015em;
-  background-color: #FAFAFA;
-  color: #18181B;
+  background-color: #F8FAFC;
+  color: #0F172A;
 }
 
 .dark body {
-  background-color: #09090B;
-  color: #F4F4F5;
+  background-color: #020617;
+  color: #F1F5F9;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -70,33 +71,34 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Apple iOS Glass Surface */
 .ios-glass {
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(226, 232, 240, 0.8);
 }
 
 .dark .ios-glass {
-  background: rgba(24, 24, 27, 0.82);
+  background: rgba(15, 23, 42, 0.85);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(30, 41, 59, 0.8);
 }
 
+/* Blue Gradient Primary Button */
 .btn-primary {
-  @apply bg-accent-500 text-white font-medium px-5 py-2.5 rounded-2xl
-         hover:bg-accent-600 active:scale-[0.98] transition-all duration-150
-         shadow-xs disabled:opacity-40 disabled:cursor-not-allowed
+  @apply bg-gradient-to-r from-blue-600 to-sky-500 text-white font-semibold px-5 py-2.5 rounded-2xl
+         hover:from-blue-700 hover:to-sky-600 active:scale-[0.98] transition-all duration-150
+         shadow-md shadow-blue-500/25 disabled:opacity-40 disabled:cursor-not-allowed
          flex items-center justify-center gap-2;
 }
 
 .btn-secondary {
-  @apply bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 font-medium px-4 py-2 rounded-xl
-         hover:bg-neutral-200 dark:hover:bg-neutral-700 active:scale-[0.98] transition-all duration-150 border border-neutral-200/80 dark:border-neutral-700;
+  @apply bg-white dark:bg-neutral-800/90 text-neutral-800 dark:text-neutral-200 font-semibold px-4 py-2 rounded-2xl
+         hover:bg-neutral-50 dark:hover:bg-neutral-700 active:scale-[0.98] transition-all duration-150 border border-neutral-200/80 dark:border-neutral-700/80 shadow-xs;
 }
 
 .card {
-  @apply bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 shadow-xs transition-colors;
+  @apply bg-white dark:bg-neutral-900 rounded-3xl border border-slate-200/70 dark:border-neutral-800/80 shadow-sm shadow-slate-100 dark:shadow-none transition-all;
 }
 
 /* Badges */
@@ -135,31 +137,31 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .admin-sidebar-link-active {
-  @apply bg-neutral-800 text-white font-medium shadow-xs;
+  @apply bg-blue-600 text-white font-medium shadow-xs;
 }
 
 .input-field {
-  @apply w-full px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700 rounded-xl
-         focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent
-         text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 transition-all text-sm;
+  @apply w-full px-4 py-2.5 bg-white dark:bg-neutral-800/60 border border-slate-200 dark:border-neutral-700 rounded-2xl
+         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+         text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 transition-all text-xs sm:text-sm;
 }
 
 .table-header {
-  @apply bg-neutral-100/80 dark:bg-neutral-800/60 text-neutral-500 dark:text-neutral-400 text-xs font-semibold uppercase tracking-wider;
+  @apply bg-slate-100/70 dark:bg-neutral-800/60 text-neutral-500 dark:text-neutral-400 text-xs font-semibold uppercase tracking-wider;
 }
 
 .table-row {
-  @apply border-b border-neutral-100 dark:border-neutral-800/80 hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors;
+  @apply border-b border-neutral-100 dark:border-neutral-800/80 hover:bg-slate-50 dark:hover:bg-neutral-800/40 transition-colors;
 }
 
 .kpi-card {
-  @apply bg-white dark:bg-neutral-900 rounded-2xl p-5 shadow-xs border border-neutral-200/80 dark:border-neutral-800 transition-all;
+  @apply bg-white dark:bg-neutral-900 rounded-3xl p-5 shadow-sm border border-slate-200/70 dark:border-neutral-800/80 transition-all;
 }
 
 .qty-stepper-btn {
   @apply w-8 h-8 flex items-center justify-center rounded-xl
-         bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700
-         transition-colors font-medium text-sm;
+         bg-slate-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-slate-200 dark:hover:bg-neutral-700
+         transition-colors font-medium text-xs;
 }
 
 /* Custom Scrollbar */
