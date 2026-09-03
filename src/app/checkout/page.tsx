@@ -15,14 +15,9 @@ import type { Voucher } from '@/types';
 
 type DeliveryZone = 'LUAR_PERUM' | 'DALAM_PERUM';
 
-const DELIVERY_FEE: Record<DeliveryZone, number> = {
-  LUAR_PERUM: 3000,
-  DALAM_PERUM: 1000,
-};
-
 const ZONE_LABELS: Record<DeliveryZone, string> = {
-  LUAR_PERUM: 'Luar Perum / Onkir Standar',
-  DALAM_PERUM: 'Daerah Perum / Onkir Hemat',
+  LUAR_PERUM: 'Luar Perum / Ongkir Dibicarakan via WhatsApp',
+  DALAM_PERUM: 'Daerah Perum (Gratis Ongkir)',
 };
 
 export default function CheckoutPage() {
@@ -33,7 +28,7 @@ export default function CheckoutPage() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
-  const [zone, setZone] = useState<DeliveryZone>('LUAR_PERUM');
+  const [zone, setZone] = useState<DeliveryZone>('DALAM_PERUM');
   const [notes, setNotes] = useState('');
   const [voucherCode, setVoucherCode] = useState('');
   const [appliedVoucher, setAppliedVoucher] = useState<{ voucher: Voucher; discount: number } | null>(null);
@@ -42,9 +37,9 @@ export default function CheckoutPage() {
   const [formError, setFormError] = useState('');
   const [isPending, startTransition] = useTransition();
 
-  const deliveryFee = DELIVERY_FEE[zone];
   const discountAmount = appliedVoucher?.discount ?? 0;
-  const finalAmount = Math.max(0, subtotal + deliveryFee - discountAmount);
+  // Ongkir dihapus dari total karena akan dibicarakan via WhatsApp admin
+  const finalAmount = Math.max(0, subtotal - discountAmount);
 
   async function handleApplyVoucher() {
     if (!voucherCode.trim()) return;
@@ -98,7 +93,7 @@ export default function CheckoutPage() {
           customer_notes: notes.trim() || null,
           customer_address: fullAddress,
           delivery_zone: zone,
-          delivery_fee: deliveryFee,
+          delivery_fee: 0,
           total_amount: subtotal,
           discount_amount: discountAmount,
           final_amount: finalAmount,
@@ -120,7 +115,6 @@ export default function CheckoutPage() {
           created_at: createdAt,
         }));
 
-        // Always save to local cache for instant resilience
         try {
           const fullOrder = { ...orderData, items: orderItemsData, order_items: orderItemsData };
           localStorage.setItem(`lah_gabin_order_${invoiceCode}`, JSON.stringify(fullOrder));
@@ -132,7 +126,6 @@ export default function CheckoutPage() {
           );
         } catch {}
 
-        // Persist to Supabase if configured
         if (isSupabaseConfigured()) {
           try {
             const { data: dbOrder, error: orderError } = await supabase
@@ -195,7 +188,6 @@ export default function CheckoutPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Summary Card */}
           <div className="card p-4">
             <h2 className="font-heading font-bold text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">
               Ringkasan Pesanan
@@ -222,7 +214,6 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* Customer Data */}
           <div className="card p-4 space-y-3.5">
             <h2 className="font-heading font-bold text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
               Data Pemesan
@@ -270,12 +261,27 @@ export default function CheckoutPage() {
               />
             </div>
 
-            {/* Delivery Zone Toggle */}
             <div>
               <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-2">
                 Zona Pengiriman *
               </label>
               <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setZone('DALAM_PERUM')}
+                  className={`p-3 rounded-2xl border-2 text-left transition-all ${
+                    zone === 'DALAM_PERUM'
+                      ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/30'
+                      : 'border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/50'
+                  }`}
+                >
+                  <p className={`font-heading font-bold text-xs ${zone === 'DALAM_PERUM' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-800 dark:text-neutral-200'}`}>
+                    Daerah Perum
+                  </p>
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5 font-bold">
+                    Gratis Ongkir
+                  </p>
+                </button>
                 <button
                   type="button"
                   onClick={() => setZone('LUAR_PERUM')}
@@ -289,23 +295,7 @@ export default function CheckoutPage() {
                     Luar Perum
                   </p>
                   <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 font-medium">
-                    Onkir {formatRupiah(DELIVERY_FEE.LUAR_PERUM)}
-                  </p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setZone('DALAM_PERUM')}
-                  className={`p-3 rounded-2xl border-2 text-left transition-all ${
-                    zone === 'DALAM_PERUM'
-                      ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/30'
-                      : 'border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/50'
-                  }`}
-                >
-                  <p className={`font-heading font-bold text-xs ${zone === 'DALAM_PERUM' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-800 dark:text-neutral-200'}`}>
-                    Daerah Perum
-                  </p>
-                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 font-medium">
-                    Onkir {formatRupiah(DELIVERY_FEE.DALAM_PERUM)}
+                    Ongkir via WhatsApp
                   </p>
                 </button>
               </div>
@@ -325,7 +315,6 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* Voucher */}
           <div className="card p-4">
             <h2 className="font-heading font-bold text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
               <Tag size={13} /> Kupon / Voucher
@@ -373,15 +362,14 @@ export default function CheckoutPage() {
             )}
           </div>
 
-          {/* Payment & Total */}
           <div className="card p-4 space-y-2">
             <div className="flex justify-between text-sm text-neutral-600 dark:text-neutral-400">
               <span className="font-medium">Subtotal</span>
               <span className="font-bold text-neutral-900 dark:text-white">{formatRupiah(subtotal)}</span>
             </div>
-            <div className="flex justify-between text-sm text-neutral-600 dark:text-neutral-400">
-              <span className="font-medium">Ongkir ({ZONE_LABELS[zone]})</span>
-              <span className="font-bold text-neutral-900 dark:text-white">{formatRupiah(deliveryFee)}</span>
+            <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400 font-bold">
+              <span>Ongkir</span>
+              <span>{zone === 'DALAM_PERUM' ? 'Gratis' : 'Dikonfirmasi via WhatsApp'}</span>
             </div>
             {discountAmount > 0 && (
               <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400 font-bold">
@@ -393,6 +381,9 @@ export default function CheckoutPage() {
               <span className="text-neutral-900 dark:text-white">Total Pembayaran</span>
               <span className="text-blue-600 font-extrabold text-lg">{formatRupiah(finalAmount)}</span>
             </div>
+            <p className="text-[11px] text-neutral-400 font-medium pt-1">
+              * Ongkir {zone === 'LUAR_PERUM' ? 'akan dikonfirmasi admin via WhatsApp' : 'gratis untuk Daerah Perum'}.
+            </p>
           </div>
 
           {formError && (
