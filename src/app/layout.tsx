@@ -1,21 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Poppins } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { StoreProvider } from "@/contexts/StoreContext";
 import { CartProvider } from "@/contexts/CartContext";
-
-const inter = Inter({
-  variable: "--font-sans",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const poppins = Poppins({
-  variable: "--font-heading",
-  weight: ["600", "700"],
-  subsets: ["latin"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Lah Gabin — Es Gabin Aneka Rasa",
@@ -26,7 +13,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0A2540",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0B0F17" },
+  ],
   width: "device-width",
   initialScale: 1,
 };
@@ -37,11 +27,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className={`${inter.variable} ${poppins.variable}`}>
-      <body className="min-h-screen bg-neutral-50 text-neutral-900 antialiased">
-        <StoreProvider>
-          <CartProvider>{children}</CartProvider>
-        </StoreProvider>
+    <html lang="id" suppressHydrationWarning>
+      <body className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 antialiased transition-colors selection:bg-accent-500 selection:text-white">
+        <ThemeProvider>
+          <StoreProvider>
+            <CartProvider>{children}</CartProvider>
+          </StoreProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
