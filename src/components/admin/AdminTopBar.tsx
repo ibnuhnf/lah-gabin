@@ -13,15 +13,24 @@ import {
   User,
   Globe,
   Settings,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useStoreConfig } from '@/contexts/StoreContext';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 interface AdminTopBarProps {
   onMobileMenuClick?: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export default function AdminTopBar({ onMobileMenuClick }: AdminTopBarProps) {
+export default function AdminTopBar({
+  onMobileMenuClick,
+  collapsed = false,
+  onToggleCollapse,
+}: AdminTopBarProps) {
   const { theme, toggleTheme } = useTheme();
   const { config } = useStoreConfig();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -29,18 +38,43 @@ export default function AdminTopBar({ onMobileMenuClick }: AdminTopBarProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   const isOpen = Boolean(config?.is_open);
 
+  const handleLogout = async () => {
+    try {
+      if (isSupabaseConfigured()) {
+        await supabase.auth.signOut();
+      }
+    } catch {}
+    localStorage.removeItem('lah_gabin_admin_session');
+    if (typeof window !== 'undefined') {
+      window.location.href = '/admin/login';
+    }
+  };
+
   return (
     <header className="sticky top-0 z-30 w-full bg-white/80 dark:bg-[#0b0d12]/90 backdrop-blur-xl border-b border-slate-200/70 dark:border-white/[0.06] transition-colors">
       <div className="flex items-center justify-between px-4 sm:px-6 h-16">
-        {/* Left Section */}
-        <div className="flex items-center gap-3">
+        {/* Left Section: Toggle Buttons & Search */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Mobile Drawer Trigger */}
           <button
             onClick={onMobileMenuClick}
             className="lg:hidden w-9 h-9 rounded-xl flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors"
-            aria-label="Buka Menu"
+            aria-label="Buka Menu Mobile"
           >
             <Menu size={18} />
           </button>
+
+          {/* Desktop Sidebar Collapse/Expand Toggle */}
+          {onToggleCollapse && (
+            <button
+              onClick={onToggleCollapse}
+              className="hidden lg:flex w-9 h-9 rounded-xl items-center justify-center text-neutral-600 dark:text-neutral-300 hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors"
+              title={collapsed ? 'Perluas Sidebar' : 'Kecilkan Sidebar'}
+              aria-label="Toggle Sidebar"
+            >
+              {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+            </button>
+          )}
 
           {/* Search Bar */}
           <div className="hidden md:flex items-center relative">
@@ -53,7 +87,7 @@ export default function AdminTopBar({ onMobileMenuClick }: AdminTopBarProps) {
               placeholder="Cari pesanan, produk, atau menu…"
               onFocus={() => setSearchOpen(true)}
               onBlur={() => setSearchOpen(false)}
-              className="w-[320px] lg:w-[420px] pl-10 pr-4 py-2 bg-slate-100 dark:bg-white/[0.04] border border-transparent dark:border-white/[0.06] rounded-xl text-sm text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:bg-white dark:focus:bg-[#12141a] focus:border-blue-500/30 transition-all"
+              className="w-[280px] lg:w-[380px] pl-10 pr-4 py-2 bg-slate-100 dark:bg-white/[0.04] border border-transparent dark:border-white/[0.06] rounded-xl text-sm text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:bg-white dark:focus:bg-[#12141a] focus:border-blue-500/30 transition-all"
             />
           </div>
         </div>
@@ -153,7 +187,7 @@ export default function AdminTopBar({ onMobileMenuClick }: AdminTopBarProps) {
               }}
               className="flex items-center gap-2.5 pl-2.5 pr-2 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors"
             >
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center text-white font-heading font-bold text-sm">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center text-white font-heading font-bold text-sm shadow-xs">
                 A
               </div>
               <div className="hidden sm:block text-left">
@@ -193,11 +227,7 @@ export default function AdminTopBar({ onMobileMenuClick }: AdminTopBarProps) {
                     </DropdownItem>
                   </div>
                   <button
-                    onClick={() => {
-                      if (typeof window !== 'undefined') {
-                        window.location.href = '/admin/login';
-                      }
-                    }}
+                    onClick={handleLogout}
                     className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors border-t border-slate-100 dark:border-white/[0.05]"
                   >
                     <LogOut size={14} /> Keluar (Log Out)

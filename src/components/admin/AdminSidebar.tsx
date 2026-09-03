@@ -18,14 +18,19 @@ import {
   ExternalLink,
   X,
   ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStoreConfig } from '@/contexts/StoreContext';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useState } from 'react';
 
 interface AdminSidebarProps {
   mobileOpen?: boolean;
   onMobileClose?: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 const NAV_GROUPS = [
@@ -56,28 +61,56 @@ const NAV_GROUPS = [
   },
 ];
 
-export default function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
+export default function AdminSidebar({
+  mobileOpen,
+  onMobileClose,
+  collapsed = false,
+  onToggleCollapse,
+}: AdminSidebarProps) {
   const pathname = usePathname();
 
+  const handleLogout = async () => {
+    try {
+      if (isSupabaseConfigured()) {
+        await supabase.auth.signOut();
+      }
+    } catch {}
+    localStorage.removeItem('lah_gabin_admin_session');
+    if (typeof window !== 'undefined') {
+      window.location.href = '/admin/login';
+    }
+  };
+
   const sidebarContent = (
-    <div className="flex flex-col h-full justify-between">
+    <div className="flex flex-col h-full justify-between select-none">
       <div>
         {/* Brand Logo Header */}
-        <div className="px-6 py-5 border-b border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between">
-          <Link href="/admin/dashboard" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-blue-500 to-sky-400 flex items-center justify-center text-white font-heading font-black text-base shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
+        <div
+          className={cn(
+            'py-5 border-b border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between transition-all',
+            collapsed ? 'px-3 justify-center' : 'px-5'
+          )}
+        >
+          <Link
+            href="/admin/dashboard"
+            className="flex items-center gap-3 group overflow-hidden"
+          >
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-blue-500 to-sky-400 flex items-center justify-center text-white font-heading font-black text-base shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform shrink-0">
               LG
             </div>
-            <div>
-              <p className="font-heading font-extrabold text-sm text-neutral-900 dark:text-white tracking-tight leading-tight">
-                Lah Gabin
-              </p>
-              <p className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">
-                Admin Panel
-              </p>
-            </div>
+            {!collapsed && (
+              <div className="min-w-0">
+                <p className="font-heading font-extrabold text-sm text-neutral-900 dark:text-white tracking-tight leading-tight truncate">
+                  Lah Gabin
+                </p>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">
+                  Admin Panel
+                </p>
+              </div>
+            )}
           </Link>
 
+          {/* Mobile close button */}
           {onMobileClose && (
             <button
               onClick={onMobileClose}
@@ -88,18 +121,27 @@ export default function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebar
           )}
         </div>
 
-        {/* Store Status iOS Switch */}
-        <div className="px-5 py-4 border-b border-slate-200/70 dark:border-white/[0.06]">
-          <InteractiveStoreStatusToggle />
-        </div>
+        {/* Store Status iOS Switch (hidden in narrow mode) */}
+        {!collapsed && (
+          <div className="px-4 py-3.5 border-b border-slate-200/70 dark:border-white/[0.06]">
+            <InteractiveStoreStatusToggle />
+          </div>
+        )}
 
         {/* Nav Groups */}
-        <nav className="p-3 space-y-5 overflow-y-auto max-h-[calc(100vh-280px)]">
+        <nav
+          className={cn(
+            'p-2.5 space-y-4 overflow-y-auto',
+            collapsed ? 'max-h-[calc(100vh-180px)]' : 'max-h-[calc(100vh-250px)]'
+          )}
+        >
           {NAV_GROUPS.map((group) => (
             <div key={group.title} className="space-y-1">
-              <p className="px-3 text-[10px] font-extrabold tracking-wider text-neutral-400 dark:text-neutral-500 uppercase">
-                {group.title}
-              </p>
+              {!collapsed && (
+                <p className="px-3 text-[10px] font-extrabold tracking-wider text-neutral-400 dark:text-neutral-500 uppercase">
+                  {group.title}
+                </p>
+              )}
               <div className="space-y-0.5">
                 {group.items.map((item) => {
                   const Icon = item.icon;
@@ -112,8 +154,12 @@ export default function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebar
                       key={item.href}
                       href={item.href}
                       onClick={onMobileClose}
+                      title={collapsed ? item.label : undefined}
                       className={cn(
-                        'flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 active:scale-[0.98]',
+                        'flex items-center rounded-xl text-xs font-semibold transition-all duration-150 active:scale-[0.98]',
+                        collapsed
+                          ? 'justify-center p-2.5'
+                          : 'justify-between px-3.5 py-2.5',
                         isActive
                           ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
                           : 'text-neutral-600 dark:text-neutral-400 hover:bg-slate-100 dark:hover:bg-white/[0.04] hover:text-neutral-900 dark:hover:text-white'
@@ -121,15 +167,19 @@ export default function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebar
                     >
                       <div className="flex items-center gap-3">
                         <Icon
-                          size={17}
+                          size={18}
                           className={cn(
-                            'transition-colors',
-                            isActive ? 'text-white' : 'text-neutral-400 dark:text-neutral-500'
+                            'shrink-0 transition-colors',
+                            isActive
+                              ? 'text-white'
+                              : 'text-neutral-400 dark:text-neutral-500'
                           )}
                         />
-                        <span>{item.label}</span>
+                        {!collapsed && <span className="truncate">{item.label}</span>}
                       </div>
-                      {isActive && <ChevronRight size={14} className="text-white/70" />}
+                      {!collapsed && isActive && (
+                        <ChevronRight size={14} className="text-white/70" />
+                      )}
                     </Link>
                   );
                 })}
@@ -139,26 +189,45 @@ export default function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebar
         </nav>
       </div>
 
-      {/* Footer / Logout */}
-      <div className="p-4 border-t border-slate-200/80 dark:border-white/[0.08] space-y-1.5 bg-slate-50/50 dark:bg-white/[0.01]">
+      {/* Footer / Toggle & Logout */}
+      <div className="p-3 border-t border-slate-200/80 dark:border-white/[0.08] space-y-1.5 bg-slate-50/50 dark:bg-white/[0.01]">
+        {/* Toggle Collapse Button (Desktop) */}
+        {onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            title={collapsed ? 'Perluas Sidebar' : 'Kecilkan Sidebar'}
+            className={cn(
+              'hidden lg:flex items-center rounded-xl text-xs font-semibold text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/[0.05] transition-all w-full',
+              collapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2'
+            )}
+          >
+            {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+            {!collapsed && <span>Sembunyikan Menu</span>}
+          </button>
+        )}
+
         <Link
           href="/"
           target="_blank"
-          className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/[0.05] hover:text-neutral-900 dark:hover:text-white rounded-xl transition-all"
+          title={collapsed ? 'Lihat Web Customer' : undefined}
+          className={cn(
+            'flex items-center text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/[0.05] hover:text-neutral-900 dark:hover:text-white rounded-xl transition-all',
+            collapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2'
+          )}
         >
           <ExternalLink size={15} />
-          <span>Lihat Web Customer</span>
+          {!collapsed && <span>Web Customer</span>}
         </Link>
         <button
-          onClick={async () => {
-            if (typeof window !== 'undefined') {
-              window.location.href = '/admin/login';
-            }
-          }}
-          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all"
+          onClick={handleLogout}
+          title={collapsed ? 'Keluar' : undefined}
+          className={cn(
+            'w-full flex items-center text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all',
+            collapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2'
+          )}
         >
           <LogOut size={15} />
-          <span>Keluar Portal</span>
+          {!collapsed && <span>Keluar</span>}
         </button>
       </div>
     </div>
@@ -166,8 +235,13 @@ export default function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebar
 
   return (
     <>
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 shrink-0 min-h-screen bg-white dark:bg-[#0b0d12] border-r border-slate-200/80 dark:border-white/[0.08] transition-colors">
+      {/* Desktop Sidebar (Collapsible width) */}
+      <aside
+        className={cn(
+          'hidden lg:flex flex-col shrink-0 min-h-screen bg-white dark:bg-[#0b0d12] border-r border-slate-200/80 dark:border-white/[0.08] transition-all duration-300',
+          collapsed ? 'w-20' : 'w-64'
+        )}
+      >
         {sidebarContent}
       </aside>
 
@@ -203,25 +277,25 @@ function InteractiveStoreStatusToggle() {
   };
 
   return (
-    <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-100/80 dark:bg-white/[0.04] border border-slate-200/60 dark:border-white/[0.06]">
-      <div className="flex items-center gap-2.5">
+    <div className="flex items-center justify-between p-2 rounded-2xl bg-slate-100/80 dark:bg-white/[0.04] border border-slate-200/60 dark:border-white/[0.06]">
+      <div className="flex items-center gap-2">
         <div
           className={cn(
-            'w-7 h-7 rounded-xl flex items-center justify-center transition-colors',
+            'w-6 h-6 rounded-lg flex items-center justify-center transition-colors',
             isOpen
               ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
               : 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
           )}
         >
-          <Store size={15} />
+          <Store size={13} />
         </div>
         <div>
-          <p className="text-[11px] font-bold text-neutral-800 dark:text-neutral-200">
-            Status Toko
+          <p className="text-[10px] font-bold text-neutral-800 dark:text-neutral-200">
+            Toko
           </p>
           <p
             className={cn(
-              'text-[10px] font-extrabold uppercase tracking-wider',
+              'text-[9px] font-extrabold uppercase tracking-wider',
               isOpen ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
             )}
           >
@@ -237,15 +311,15 @@ function InteractiveStoreStatusToggle() {
         disabled={updating}
         onClick={handleToggle}
         className={cn(
-          'relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50',
+          'relative inline-flex h-4 w-8 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50',
           isOpen ? 'bg-emerald-500' : 'bg-neutral-400 dark:bg-neutral-600'
         )}
       >
         <span className="sr-only">Toggle Status Toko</span>
         <span
           className={cn(
-            'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out',
-            isOpen ? 'translate-x-5' : 'translate-x-0'
+            'pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out',
+            isOpen ? 'translate-x-4' : 'translate-x-0'
           )}
         />
       </button>
