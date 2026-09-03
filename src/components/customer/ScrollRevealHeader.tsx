@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ShoppingBag, Sparkles } from 'lucide-react';
 
@@ -16,38 +16,22 @@ const WORDS = [
   'Gabin!',
 ];
 
-// Append first item to create a seamless infinite forward loop
-const DISPLAY_WORDS = [...WORDS, WORDS[0]];
-
 export default function ScrollRevealHeader() {
   const [index, setIndex] = useState(0);
-  const [animate, setAnimate] = useState(true);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setAnimate(true);
-      setIndex((prev) => {
-        const next = prev + 1;
-        // If we reached the clone (last item), seamlessly snap back to index 0 without transition
-        if (next === DISPLAY_WORDS.length - 1) {
-          if (timeoutRef.current) clearTimeout(timeoutRef.current);
-          timeoutRef.current = setTimeout(() => {
-            setAnimate(false);
-            setIndex(0);
-          }, 450);
-        }
-        return next;
-      });
-    }, 1500);
-
-    return () => {
-      clearInterval(interval);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    const tick = () => {
+      setVisible(false);
+      setTimeout(() => {
+        setIndex((prev) => (prev + 1) % WORDS.length);
+        setVisible(true);
+      }, 180);
     };
-  }, []);
 
-  const total = DISPLAY_WORDS.length;
+    const interval = setInterval(tick, 1400);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <section className="relative px-4 pt-10 pb-8 sm:pt-14 sm:pb-10 text-center max-w-2xl mx-auto overflow-hidden select-none">
@@ -66,36 +50,17 @@ export default function ScrollRevealHeader() {
           Lah&nbsp;
         </span>
 
-        <div className="relative h-[1.3em] overflow-hidden flex flex-col items-start justify-center">
-          <div
-            className={`flex flex-col ${
-              animate ? 'transition-transform duration-400 ease-out' : ''
-            }`}
-            style={{
-              transform: `translateY(-${index * (100 / total)}%)`,
-              height: `${total * 100}%`,
-            }}
+        <div className="relative h-[1.3em] inline-flex items-center justify-start min-w-[6.5em]">
+          <span
+            key={index}
+            className={`inline-block transition-all duration-200 ease-out ${
+              visible
+                ? 'opacity-100 translate-y-0'
+                : 'opacity-0 -translate-y-2'
+            } text-blue-600 dark:text-white font-extrabold`}
           >
-            {DISPLAY_WORDS.map((word, idx) => {
-              const isSelected = index === idx;
-              const isLastWord = word === 'Gabin!';
-
-              return (
-                <div
-                  key={`${word}-${idx}`}
-                  className={`h-[1.3em] flex items-center transition-all duration-300 ${
-                    isSelected
-                      ? isLastWord
-                        ? 'text-blue-600 dark:text-sky-400 font-black scale-105'
-                        : 'text-blue-600 dark:text-sky-400 font-extrabold scale-100'
-                      : 'text-slate-300 dark:text-neutral-700 opacity-20 scale-95'
-                  }`}
-                >
-                  {word}
-                </div>
-              );
-            })}
-          </div>
+            {WORDS[index]}
+          </span>
         </div>
       </div>
 
