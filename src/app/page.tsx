@@ -237,13 +237,13 @@ export default function HomePage() {
         {/* Search & Segmented Filter Bar */}
         <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between mb-6">
           <div className="relative flex-1">
-            <Search size={14} className="absolute left-3.5 top-3 text-neutral-400" />
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
             <input
               type="text"
               placeholder="Cari varian rasa kesukaanmu..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="input-field pl-9 py-2.5 text-xs shadow-xs"
+              className="input-field !pl-10 py-2.5 text-xs shadow-xs"
             />
           </div>
 

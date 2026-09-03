@@ -168,13 +168,13 @@ function OrderTrackingContent() {
       {/* Search Bar (Kode Invoice OR Nomor WhatsApp) */}
       <div className="flex gap-2 mb-4">
         <div className="relative flex-1">
-          <Search size={15} className="absolute left-3.5 top-3.5 text-neutral-400" />
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
           <input
             type="text"
             placeholder="Masukkan Kode Invoice atau No. WhatsApp"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="input-field pl-9 font-medium text-xs"
+            className="input-field !pl-10 font-medium text-xs"
             onKeyDown={(e) => e.key === 'Enter' && handleSearch(searchInput)}
           />
         </div>
