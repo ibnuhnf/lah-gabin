@@ -7,13 +7,13 @@ import { Product } from '@/types';
 import CustomerPageWrapper from '@/components/customer/CustomerPageWrapper';
 import ProductCard from '@/components/customer/ProductCard';
 import { useStoreConfig } from '@/contexts/StoreContext';
-import { Search, ShoppingBag, Sparkles, AlertCircle } from 'lucide-react';
+import { Search, ShoppingBag, AlertCircle } from 'lucide-react';
 
 const FALLBACK_PRODUCTS: Product[] = [
   {
     id: '1',
     name: 'Es Gabin Coklat',
-    description: 'Renyah gabin topping coklat meises legit, segar dengan es batu.',
+    description: 'Biskuit gabin renyah dengan isian fla coklat lembut manis.',
     base_price: 5000,
     discount_price: null,
     discount_start_date: null,
@@ -30,7 +30,7 @@ const FALLBACK_PRODUCTS: Product[] = [
   {
     id: '2',
     name: 'Es Gabin Keju',
-    description: 'Perpaduan keju gurih dan gabin renyah, dingin menyegarkan.',
+    description: 'Paduan keju gurih creamy dan biskuit renyah dingin.',
     base_price: 5500,
     discount_price: null,
     discount_start_date: null,
@@ -47,7 +47,7 @@ const FALLBACK_PRODUCTS: Product[] = [
   {
     id: '3',
     name: 'Es Gabin Susu',
-    description: 'Susu kental manis melimpah, gabin lembut nan manis.',
+    description: 'Susu manis legit dengan sensasi dingin menyegarkan.',
     base_price: 5000,
     discount_price: null,
     discount_start_date: null,
@@ -64,7 +64,7 @@ const FALLBACK_PRODUCTS: Product[] = [
   {
     id: '4',
     name: 'Es Gabin Tiramisu',
-    description: 'Varian premium rasa tiramisu, perpaduan kopi dan keju.',
+    description: 'Varian premium rasa tiramisu dengan aroma kopi khas.',
     base_price: 7000,
     discount_price: null,
     discount_start_date: null,
@@ -81,7 +81,7 @@ const FALLBACK_PRODUCTS: Product[] = [
   {
     id: '5',
     name: 'Es Gabin Matcha',
-    description: 'Matcha asli dipadu susu creamy dan biskuit gabin.',
+    description: 'Matcha otentik berpadu susu lembut dan biskuit.',
     base_price: 6500,
     discount_price: null,
     discount_start_date: null,
@@ -98,7 +98,7 @@ const FALLBACK_PRODUCTS: Product[] = [
   {
     id: '6',
     name: 'Es Gabin Strawberry',
-    description: 'Topping strawberry segar manis bikin nagih.',
+    description: 'Topping fla strawberry segar dengan rasa manis alami.',
     base_price: 6000,
     discount_price: null,
     discount_start_date: null,
@@ -115,7 +115,7 @@ const FALLBACK_PRODUCTS: Product[] = [
   {
     id: '7',
     name: 'Es Gabin Oreo',
-    description: 'Crushed oreo dan krim vanilla gurih lezat.',
+    description: 'Remukan biskuit oreo dan krim vanilla gurih.',
     base_price: 6000,
     discount_price: null,
     discount_start_date: null,
@@ -132,7 +132,7 @@ const FALLBACK_PRODUCTS: Product[] = [
   {
     id: '8',
     name: 'Es Gabin Original',
-    description: 'Original gabin renyah es, rasa manis klasik masa kecil.',
+    description: 'Cita rasa klasik gabin legendaris yang manis renyah.',
     base_price: 4000,
     discount_price: null,
     discount_start_date: null,
@@ -156,7 +156,6 @@ export default function HomePage() {
   const isOpen = Boolean(config?.is_open);
 
   useEffect(() => {
-    // Try localStorage cache first for instant sync
     try {
       const local = localStorage.getItem('lah_gabin_admin_products');
       if (local) {
@@ -192,118 +191,95 @@ export default function HomePage() {
 
   return (
     <CustomerPageWrapper>
-      {/* Closed Banner Warning */}
+      {/* Closed Notice */}
       {!isOpen && (
-        <div className="bg-rose-500/10 dark:bg-rose-950/40 border-b border-rose-500/20 px-4 py-2.5 text-center text-xs font-semibold text-rose-600 dark:text-rose-400 flex items-center justify-center gap-2">
-          <AlertCircle size={15} />
-          Saat ini toko sedang tutup. Anda tetap dapat melihat menu, pemesanan akan dibuka kembali segera.
+        <div className="bg-rose-50 dark:bg-rose-950/40 border-b border-rose-200 dark:border-rose-900 px-4 py-2.5 text-center text-xs font-semibold text-rose-700 dark:text-rose-400 flex items-center justify-center gap-2">
+          <AlertCircle size={14} />
+          Saat ini toko sedang tutup. Pemesanan akan dibuka kembali segera.
         </div>
       )}
 
-      {/* Hero Section (iOS Modern Minimalist) */}
-      <section className="relative px-4 pt-10 pb-8 sm:pt-14 sm:pb-12 text-center overflow-hidden">
-        {/* Subtle decorative glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-accent-500/10 dark:bg-accent-500/15 rounded-full blur-3xl pointer-events-none" />
+      {/* Hero Header */}
+      <section className="px-4 pt-8 pb-6 sm:pt-12 sm:pb-8 text-center max-w-xl mx-auto">
+        <h1 className="font-heading font-bold text-2xl sm:text-4xl text-neutral-900 dark:text-white tracking-tight leading-tight">
+          Lah Gabin
+        </h1>
+        <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-1 max-w-md mx-auto">
+          Es gabin renyah dengan isian fla lembut dan berbagai pilihan rasa.
+        </p>
 
-        <div className="relative max-w-2xl mx-auto flex flex-col items-center gap-3">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-xs font-semibold border border-neutral-200/80 dark:border-neutral-700 shadow-2xs">
-            <Sparkles size={13} className="text-accent-500" />
-            <span>Aneka Varian Es Gabin Kekinian</span>
-          </div>
-
-          <h1 className="font-heading font-black text-3xl sm:text-5xl text-neutral-900 dark:text-white tracking-tight leading-[1.15]">
-            Dingin di Hati, <br />
-            <span className="text-accent-500">Renyah di Lidah.</span>
-          </h1>
-
-          <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-400 max-w-md mt-1">
-            Paduan vla susu lembut, biskuit renyah, dan aneka topping istimewa. Nikmati kesegaran es gabin kapan saja.
-          </p>
-
-          <div className="flex gap-3 mt-3">
-            <a
-              href="#katalog"
-              className="btn-primary text-sm shadow-md"
-            >
-              <ShoppingBag size={17} /> Pesan Sekarang
-            </a>
-            <Link
-              href="/pemesanan"
-              className="px-5 py-2.5 rounded-2xl bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-sm font-semibold transition-all border border-neutral-200/60 dark:border-neutral-700"
-            >
-              Cek Status Order
-            </Link>
-          </div>
+        <div className="flex justify-center gap-2.5 mt-4">
+          <a href="#menu" className="btn-primary text-xs py-2 px-4 shadow-xs">
+            <ShoppingBag size={14} /> Lihat Menu
+          </a>
+          <Link
+            href="/pemesanan"
+            className="btn-secondary text-xs py-2 px-4"
+          >
+            Lacak Pesanan
+          </Link>
         </div>
       </section>
 
-      {/* Catalog & Search Section */}
-      <div id="katalog" className="max-w-3xl mx-auto px-4 py-6">
-        {/* Search & Filter Bar */}
-        <div className="flex flex-col sm:flex-row gap-3 items-center justify-between mb-6">
-          <h2 className="font-heading font-extrabold text-xl text-neutral-900 dark:text-white w-full sm:w-auto">
-            Daftar Menu
-          </h2>
+      {/* Menu Catalog */}
+      <div id="menu" className="max-w-3xl mx-auto px-4 py-4">
+        {/* Search & Tabs */}
+        <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between mb-5">
+          <div className="relative flex-1">
+            <Search size={14} className="absolute left-3.5 top-2.5 text-neutral-400" />
+            <input
+              type="text"
+              placeholder="Cari varian rasa..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="input-field pl-9 py-2 text-xs"
+            />
+          </div>
 
-          <div className="flex flex-col sm:flex-row gap-2.5 w-full sm:w-auto">
-            {/* Search Input (Pill iOS style) */}
-            <div className="relative flex-1 sm:w-56">
-              <Search size={15} className="absolute left-3.5 top-3 text-neutral-400" />
-              <input
-                type="text"
-                placeholder="Cari rasa gabin..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-xs bg-neutral-100/90 dark:bg-neutral-800/90 border border-neutral-200/80 dark:border-neutral-700 rounded-full focus:outline-none focus:ring-2 focus:ring-accent-500 text-neutral-900 dark:text-white"
-              />
-            </div>
-
-            {/* Segment Controls */}
-            <div className="flex bg-neutral-200/70 dark:bg-neutral-800/80 p-1 rounded-full gap-1 self-start sm:self-auto">
-              <button
-                onClick={() => setFilter('all')}
-                className={`px-3.5 py-1 text-xs font-semibold rounded-full transition-all ${
-                  filter === 'all'
-                    ? 'bg-white dark:bg-neutral-900 shadow-xs text-neutral-900 dark:text-white font-bold'
-                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'
-                }`}
-              >
-                Semua
-              </button>
-              <button
-                onClick={() => setFilter('ready')}
-                className={`px-3.5 py-1 text-xs font-semibold rounded-full transition-all ${
-                  filter === 'ready'
-                    ? 'bg-white dark:bg-neutral-900 shadow-xs text-neutral-900 dark:text-white font-bold'
-                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'
-                }`}
-              >
-                Ready
-              </button>
-              <button
-                onClick={() => setFilter('po')}
-                className={`px-3.5 py-1 text-xs font-semibold rounded-full transition-all ${
-                  filter === 'po'
-                    ? 'bg-white dark:bg-neutral-900 shadow-xs text-neutral-900 dark:text-white font-bold'
-                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'
-                }`}
-              >
-                PO
-              </button>
-            </div>
+          <div className="flex bg-neutral-200/80 dark:bg-neutral-800 p-1 rounded-xl gap-1 self-start sm:self-auto">
+            <button
+              onClick={() => setFilter('all')}
+              className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
+                filter === 'all'
+                  ? 'bg-white dark:bg-neutral-900 shadow-xs text-neutral-900 dark:text-white font-semibold'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+              }`}
+            >
+              Semua
+            </button>
+            <button
+              onClick={() => setFilter('ready')}
+              className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
+                filter === 'ready'
+                  ? 'bg-white dark:bg-neutral-900 shadow-xs text-neutral-900 dark:text-white font-semibold'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+              }`}
+            >
+              Ready
+            </button>
+            <button
+              onClick={() => setFilter('po')}
+              className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
+                filter === 'po'
+                  ? 'bg-white dark:bg-neutral-900 shadow-xs text-neutral-900 dark:text-white font-semibold'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+              }`}
+            >
+              Pre-Order
+            </button>
           </div>
         </div>
 
         {/* Product Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {filteredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
 
         {filteredProducts.length === 0 && (
-          <div className="text-center py-16 text-neutral-400 text-sm">
-            Tidak ada produk yang cocok dengan pencarian &quot;{search}&quot;.
+          <div className="text-center py-12 text-neutral-400 text-xs">
+            Tidak ditemukan varian yang cocok dengan &quot;{search}&quot;.
           </div>
         )}
       </div>

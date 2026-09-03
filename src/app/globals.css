@@ -1,41 +1,47 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
-  --color-brand-950: #051322;
-  --color-brand-900: #0A2540;
-  --color-brand-800: #143860;
-  --color-brand-700: #255894;
-  --color-brand-600: #3B82F6;
-  --color-brand-500: #60A5FA;
-  --color-brand-100: #DBEAFE;
-  --color-brand-50: #EFF6FF;
+  --color-brand-950: #090D14;
+  --color-brand-900: #0F172A;
+  --color-brand-800: #1E293B;
+  --color-brand-700: #334155;
+  --color-brand-600: #2563EB;
+  --color-brand-500: #3B82F6;
+  --color-brand-100: #E0E7FF;
+  --color-brand-50: #F8FAFC;
 
-  --color-accent-500: #FF6B00;
-  --color-accent-600: #E65A00;
-  --color-warning-500: #FACC15;
-  --color-success-500: #10B981;
-  --color-danger-500: #EF4444;
-  --color-warning-amber: #F59E0B;
+  --color-accent-500: #EA580C;
+  --color-accent-600: #C2410C;
+  --color-warning-500: #EAB308;
+  --color-success-500: #16A34A;
+  --color-danger-500: #DC2626;
 
-  --color-neutral-50: #F9FAFB;
-  --color-neutral-100: #F3F4F6;
-  --color-neutral-200: #E5E7EB;
-  --color-neutral-300: #D1D5DB;
-  --color-neutral-400: #9CA3AF;
-  --color-neutral-500: #6B7280;
-  --color-neutral-600: #4B5563;
-  --color-neutral-700: #374151;
-  --color-neutral-800: #1F2937;
-  --color-neutral-900: #111827;
-  --color-neutral-950: #0B0F17;
+  --color-neutral-50: #FAFAFA;
+  --color-neutral-100: #F4F4F5;
+  --color-neutral-200: #E4E4E7;
+  --color-neutral-300: #D4D4D8;
+  --color-neutral-400: #A1A1AA;
+  --color-neutral-500: #71717A;
+  --color-neutral-600: #52525B;
+  --color-neutral-700: #3F3F46;
+  --color-neutral-800: #27272A;
+  --color-neutral-900: #18181B;
+  --color-neutral-950: #09090B;
 
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-heading: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", "Segoe UI", Roboto, sans-serif;
+  --font-heading: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "Segoe UI", Roboto, sans-serif;
 }
 
 :root {
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-heading: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", "Segoe UI", Roboto, sans-serif;
+  --font-heading: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
 }
 
 * {
@@ -47,112 +53,113 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  letter-spacing: -0.011em;
+  letter-spacing: -0.015em;
+  background-color: #FAFAFA;
+  color: #18181B;
+}
+
+.dark body {
+  background-color: #09090B;
+  color: #F4F4F5;
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
-  letter-spacing: -0.025em;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  letter-spacing: -0.03em;
 }
 
-/* iOS Glassmorphism Card & Buttons */
+/* Apple iOS Glass Surface */
 .ios-glass {
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .dark .ios-glass {
-  background: rgba(22, 27, 34, 0.75);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(24, 24, 27, 0.82);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.ios-glass-dark {
-  background: rgba(10, 37, 64, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-}
-
 .btn-primary {
-  @apply bg-accent-500 text-white font-semibold px-5 py-2.5 rounded-2xl
-         hover:bg-accent-600 active:scale-[0.97] transition-all duration-200
-         shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed
+  @apply bg-accent-500 text-white font-medium px-5 py-2.5 rounded-2xl
+         hover:bg-accent-600 active:scale-[0.98] transition-all duration-150
+         shadow-xs disabled:opacity-40 disabled:cursor-not-allowed
          flex items-center justify-center gap-2;
 }
 
 .btn-secondary {
-  @apply bg-brand-600 text-white font-medium px-4 py-2 rounded-xl
-         hover:bg-brand-700 active:scale-[0.97] transition-all duration-200;
+  @apply bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 font-medium px-4 py-2 rounded-xl
+         hover:bg-neutral-200 dark:hover:bg-neutral-700 active:scale-[0.98] transition-all duration-150 border border-neutral-200/80 dark:border-neutral-700;
 }
 
 .card {
-  @apply bg-white dark:bg-neutral-900 rounded-3xl shadow-xs border border-neutral-200/70 dark:border-neutral-800 transition-colors;
-}
-
-.ios-card {
-  @apply bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl rounded-3xl p-5 border border-neutral-200/60 dark:border-neutral-800 shadow-sm transition-all;
+  @apply bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 shadow-xs transition-colors;
 }
 
 /* Badges */
 .badge-ready {
-  @apply bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-xs font-semibold px-2.5 py-0.5 rounded-full;
+  @apply bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 text-xs font-semibold px-2.5 py-0.5 rounded-full;
 }
 
 .badge-po {
-  @apply bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-xs font-semibold px-2.5 py-0.5 rounded-full;
+  @apply bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60 text-xs font-semibold px-2.5 py-0.5 rounded-full;
 }
 
 .badge-pending {
-  @apply bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-xs font-semibold px-2.5 py-0.5 rounded-full;
+  @apply bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60 text-xs font-semibold px-2.5 py-0.5 rounded-full;
 }
 
 .badge-diproses {
-  @apply bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-500/20 text-xs font-semibold px-2.5 py-0.5 rounded-full;
+  @apply bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800/60 text-xs font-semibold px-2.5 py-0.5 rounded-full;
 }
 
 .badge-selesai {
-  @apply bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-xs font-semibold px-2.5 py-0.5 rounded-full;
+  @apply bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 text-xs font-semibold px-2.5 py-0.5 rounded-full;
 }
 
 .badge-dibatalkan {
-  @apply bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/20 text-xs font-semibold px-2.5 py-0.5 rounded-full;
+  @apply bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/60 text-xs font-semibold px-2.5 py-0.5 rounded-full;
 }
 
 /* Admin Sidebar */
 .admin-sidebar {
-  @apply bg-brand-950 dark:bg-black text-white min-h-screen w-64 flex flex-col border-r border-white/10;
+  @apply bg-neutral-950 dark:bg-black text-white min-h-screen w-64 flex flex-col border-r border-neutral-800;
 }
 
 .admin-sidebar-link {
-  @apply flex items-center gap-3 px-3.5 py-2.5 text-neutral-300 dark:text-neutral-400
-         hover:bg-white/10 hover:text-white rounded-2xl mx-2 transition-all duration-150 active:scale-[0.98];
+  @apply flex items-center gap-3 px-3.5 py-2.5 text-neutral-400
+         hover:bg-neutral-900 hover:text-white rounded-xl mx-2 transition-all duration-150 active:scale-[0.98];
 }
 
 .admin-sidebar-link-active {
-  @apply bg-white/15 text-white font-medium shadow-xs;
+  @apply bg-neutral-800 text-white font-medium shadow-xs;
 }
 
 .input-field {
-  @apply w-full px-4 py-2.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-300/80 dark:border-neutral-700 rounded-2xl
-         focus:outline-none focus:ring-2 focus:ring-accent-500 dark:focus:ring-accent-500 focus:border-transparent
+  @apply w-full px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700 rounded-xl
+         focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent
          text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 transition-all text-sm;
 }
 
 .table-header {
-  @apply bg-neutral-100/70 dark:bg-neutral-800/60 text-neutral-600 dark:text-neutral-300 text-xs font-semibold uppercase tracking-wider;
+  @apply bg-neutral-100/80 dark:bg-neutral-800/60 text-neutral-500 dark:text-neutral-400 text-xs font-semibold uppercase tracking-wider;
 }
 
 .table-row {
-  @apply border-b border-neutral-100 dark:border-neutral-800/80 hover:bg-neutral-50/80 dark:hover:bg-neutral-800/40 transition-colors;
+  @apply border-b border-neutral-100 dark:border-neutral-800/80 hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors;
 }
 
 .kpi-card {
-  @apply bg-white dark:bg-neutral-900 rounded-3xl p-5 shadow-xs border border-neutral-200/80 dark:border-neutral-800 transition-all;
+  @apply bg-white dark:bg-neutral-900 rounded-2xl p-5 shadow-xs border border-neutral-200/80 dark:border-neutral-800 transition-all;
+}
+
+.qty-stepper-btn {
+  @apply w-8 h-8 flex items-center justify-center rounded-xl
+         bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700
+         transition-colors font-medium text-sm;
 }
 
 /* Custom Scrollbar */
@@ -166,5 +173,5 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-neutral-300/80 dark:bg-neutral-700 rounded-full hover:bg-neutral-400 dark:hover:bg-neutral-600;
+  @apply bg-neutral-300 dark:bg-neutral-700 rounded-full hover:bg-neutral-400 dark:hover:bg-neutral-600;
 }

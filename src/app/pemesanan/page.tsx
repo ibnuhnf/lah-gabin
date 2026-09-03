@@ -3,9 +3,9 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Download, MessageCircle, Search, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Download, MessageCircle, Search, Clock, CheckCircle2, XCircle, Loader2, ArrowLeft } from 'lucide-react';
 import CustomerPageWrapper from '@/components/customer/CustomerPageWrapper';
-import { getSupabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useStoreConfig } from '@/contexts/StoreContext';
 import { formatRupiah } from '@/lib/utils';
 import { buildWhatsAppURL } from '@/lib/whatsapp';
@@ -13,11 +13,31 @@ import { downloadInvoicePDF } from '@/lib/pdf';
 import type { Order, OrderItem } from '@/types';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof Clock }> = {
-  PENDING_APPROVAL: { label: 'Menunggu Konfirmasi', color: 'text-warning-amber bg-amber-50', icon: Clock },
-  DITERIMA_PROSES: { label: 'Diterima / Diproses', color: 'text-brand-800 bg-brand-50', icon: Loader2 },
-  DIPROSES: { label: 'Sedang Diproses', color: 'text-brand-800 bg-brand-50', icon: Loader2 },
-  SELESAI: { label: 'Selesai', color: 'text-success-500 bg-green-50', icon: CheckCircle },
-  DIBATALKAN: { label: 'Dibatalkan', color: 'text-danger-500 bg-red-50', icon: XCircle },
+  PENDING_APPROVAL: {
+    label: 'Menunggu Konfirmasi',
+    color: 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/60',
+    icon: Clock,
+  },
+  DITERIMA_PROSES: {
+    label: 'Pesanan Diproses',
+    color: 'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800/60',
+    icon: Loader2,
+  },
+  DIPROSES: {
+    label: 'Pesanan Diproses',
+    color: 'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800/60',
+    icon: Loader2,
+  },
+  SELESAI: {
+    label: 'Pesanan Selesai',
+    color: 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60',
+    icon: CheckCircle2,
+  },
+  DIBATALKAN: {
+    label: 'Pesanan Dibatalkan',
+    color: 'text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800/60',
+    icon: XCircle,
+  },
 };
 
 function OrderTrackingContent() {
@@ -37,26 +57,41 @@ function OrderTrackingContent() {
   }, [initialCode]);
 
   async function fetchOrder(code: string) {
-    if (!code.trim()) return;
+    const cleanCode = code.trim().toUpperCase();
+    if (!cleanCode) return;
     setLoading(true);
     setNotFound(false);
     setOrder(null);
 
+    // 1. Check local cache first
     try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*, order_items(*)')
-        .eq('invoice_code', code.trim().toUpperCase())
-        .single();
-
-      if (error || !data) {
-        setNotFound(true);
-      } else {
-        setOrder({ ...data, items: data.order_items || [] });
+      const cached = localStorage.getItem(`lah_gabin_order_${cleanCode}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setOrder(parsed);
       }
-    } catch {
-      setNotFound(true);
+    } catch {}
+
+    // 2. Fetch from Supabase
+    if (isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*, order_items(*)')
+          .eq('invoice_code', cleanCode)
+          .maybeSingle();
+
+        if (!error && data) {
+          setOrder({ ...data, items: data.order_items || [] });
+          try {
+            localStorage.setItem(`lah_gabin_order_${cleanCode}`, JSON.stringify({ ...data, items: data.order_items || [] }));
+          } catch {}
+        }
+      } catch (err) {
+        console.warn('Supabase fetch error:', err);
+      }
     }
+
     setLoading(false);
   }
 
@@ -69,8 +104,9 @@ function OrderTrackingContent() {
   }
 
   function handleWhatsApp() {
-    if (!order || !config) return;
-    const url = buildWhatsAppURL(order, config.wa_number);
+    if (!order) return;
+    const adminNumber = config?.wa_number || '6282121498255';
+    const url = buildWhatsAppURL(order, adminNumber);
     window.open(url, '_blank');
   }
 
@@ -79,35 +115,43 @@ function OrderTrackingContent() {
 
   return (
     <div className="max-w-xl mx-auto px-4 py-6">
-      <h1 className="font-heading font-bold text-2xl text-neutral-900 mb-4">
-        Status Pesanan
-      </h1>
+      <div className="flex items-center gap-3 mb-6">
+        <Link
+          href="/"
+          className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 flex items-center justify-center hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+        >
+          <ArrowLeft size={16} />
+        </Link>
+        <h1 className="font-heading font-bold text-xl text-neutral-900 dark:text-white">
+          Lacak Pesanan
+        </h1>
+      </div>
 
       {/* Search Bar */}
       <div className="flex gap-2 mb-6">
         <div className="relative flex-1">
-          <Search size={16} className="absolute left-3 top-3 text-neutral-400" />
+          <Search size={15} className="absolute left-3.5 top-3 text-neutral-400" />
           <input
             type="text"
-            placeholder="Masukkan kode invoice, mis. LG-20260901-ABCD"
+            placeholder="Masukkan kode invoice (mis. LG-20260901-ABCD)"
             value={invoiceInput}
             onChange={(e) => setInvoiceInput(e.target.value.toUpperCase())}
-            className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="input-field pl-9 font-mono uppercase text-xs"
             onKeyDown={(e) => e.key === 'Enter' && fetchOrder(invoiceInput)}
           />
         </div>
         <button
           onClick={() => fetchOrder(invoiceInput)}
           disabled={loading || !invoiceInput.trim()}
-          className="btn-secondary text-sm py-2"
+          className="btn-primary text-xs px-5"
         >
-          {loading ? '...' : 'Cari'}
+          {loading ? 'Mencari...' : 'Lacak'}
         </button>
       </div>
 
       {/* Not Found */}
-      {notFound && (
-        <div className="card p-8 text-center text-neutral-500 text-sm">
+      {notFound && !order && (
+        <div className="card p-8 text-center text-neutral-500 dark:text-neutral-400 text-sm">
           Pesanan dengan kode <strong>{invoiceInput}</strong> tidak ditemukan.
         </div>
       )}
@@ -116,82 +160,114 @@ function OrderTrackingContent() {
       {order && statusInfo && (
         <div className="space-y-4">
           {/* Status Badge */}
-          <div className={`card p-4 flex items-center gap-3 ${statusInfo.color}`}>
-            <StatusIcon size={24} className={order.status === 'DIPROSES' || order.status === 'DITERIMA_PROSES' ? 'animate-spin' : ''} />
+          <div className={`p-4 rounded-2xl border flex items-center gap-3.5 ${statusInfo.color}`}>
+            <StatusIcon
+              size={22}
+              className={order.status === 'DIPROSES' || order.status === 'DITERIMA_PROSES' ? 'animate-spin' : ''}
+            />
             <div>
-              <p className="font-heading font-bold text-lg">{statusInfo.label}</p>
-              <p className="text-xs opacity-80">{order.invoice_code}</p>
+              <p className="font-heading font-bold text-base">{statusInfo.label}</p>
+              <p className="text-xs font-mono opacity-80">{order.invoice_code}</p>
             </div>
           </div>
 
           {/* Order Detail */}
-          <div className="card p-4 text-sm space-y-2">
-            <div className="flex justify-between"><span className="text-neutral-500">Pemesan</span><span className="font-medium">{order.customer_name}</span></div>
-            <div className="flex justify-between"><span className="text-neutral-500">WhatsApp</span><span className="font-medium">{order.customer_wa}</span></div>
-            <div className="flex justify-between"><span className="text-neutral-500">Tanggal</span><span className="font-medium">{new Date(order.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' })}</span></div>
+          <div className="card p-4 text-sm space-y-2.5">
+            <div className="flex justify-between">
+              <span className="text-neutral-500 dark:text-neutral-400 text-xs">Pemesan</span>
+              <span className="font-semibold text-neutral-900 dark:text-white text-xs">{order.customer_name}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-neutral-500 dark:text-neutral-400 text-xs">WhatsApp</span>
+              <span className="font-semibold text-neutral-900 dark:text-white text-xs">{order.customer_wa}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-neutral-500 dark:text-neutral-400 text-xs">Waktu Pemesanan</span>
+              <span className="font-medium text-neutral-800 dark:text-neutral-200 text-xs">
+                {new Date(order.created_at).toLocaleDateString('id-ID', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+            </div>
             {order.customer_notes && (
-              <div className="flex justify-between"><span className="text-neutral-500">Catatan</span><span className="font-medium text-right max-w-[60%]">{order.customer_notes}</span></div>
+              <div className="flex justify-between border-t border-neutral-100 dark:border-neutral-800 pt-2">
+                <span className="text-neutral-500 dark:text-neutral-400 text-xs">Catatan</span>
+                <span className="text-xs text-neutral-800 dark:text-neutral-200 text-right max-w-[65%]">
+                  {order.customer_notes}
+                </span>
+              </div>
             )}
           </div>
 
           {/* Items */}
           <div className="card p-4">
-            <h3 className="font-heading font-semibold text-sm text-neutral-700 mb-2">Rincian</h3>
-            {(order.items || []).map((item, i) => (
-              <div key={item.id || i} className="flex justify-between text-sm py-1 border-b border-neutral-100 last:border-0">
-                <span className="text-neutral-600 truncate max-w-[60%]">{item.product_name} x{item.quantity}</span>
-                <span className="font-medium">{formatRupiah(item.subtotal)}</span>
-              </div>
-            ))}
-            <div className="border-t border-neutral-200 mt-2 pt-2 space-y-1">
+            <h3 className="font-heading font-semibold text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-2.5">
+              Rincian Produk
+            </h3>
+            <div className="space-y-1.5">
+              {(order.items || []).map((item, i) => (
+                <div
+                  key={item.id || i}
+                  className="flex justify-between text-xs py-1 border-b border-neutral-100 dark:border-neutral-800 last:border-0"
+                >
+                  <span className="text-neutral-700 dark:text-neutral-300 font-medium">
+                    {item.product_name} <span className="text-neutral-400 font-normal">x{item.quantity}</span>
+                  </span>
+                  <span className="font-semibold text-neutral-900 dark:text-white">
+                    {formatRupiah(item.subtotal)}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t border-neutral-100 dark:border-neutral-800 mt-3 pt-2.5 space-y-1">
               {order.discount_amount > 0 && (
-                <div className="flex justify-between text-sm text-success-500">
-                  <span>Diskon</span><span>- {formatRupiah(order.discount_amount)}</span>
+                <div className="flex justify-between text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                  <span>Diskon Kupon</span>
+                  <span>- {formatRupiah(order.discount_amount)}</span>
                 </div>
               )}
-              <div className="flex justify-between font-bold">
-                <span>Total</span><span className="text-accent-500">{formatRupiah(order.final_amount)}</span>
+              <div className="flex justify-between font-bold text-sm text-neutral-900 dark:text-white pt-1">
+                <span>Total Pembayaran</span>
+                <span className="text-accent-500 font-extrabold">{formatRupiah(order.final_amount)}</span>
               </div>
             </div>
           </div>
 
-          {/* Actions */}
+          {/* Actions for Customer */}
           {order.status === 'PENDING_APPROVAL' && (
             <div className="space-y-2">
-              <div className="card p-4 bg-amber-50 border-amber-200 text-sm text-amber-800 text-center">
-                Pesanan belum final. Kirim konfirmasi ke WhatsApp admin & lampirkan file PDF invoice secara manual.
+              <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 text-xs text-amber-800 dark:text-amber-300 text-center font-medium">
+                Kirim konfirmasi ke WhatsApp admin untuk memproses pesanan dan verifikasi pembayaran.
               </div>
               <div className="flex gap-2">
-                <button onClick={handleDownloadPDF} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-neutral-300 text-sm font-medium text-neutral-700 hover:bg-neutral-50">
-                  <Download size={16} /> Unduh PDF
+                <button
+                  onClick={handleDownloadPDF}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-2xl border border-neutral-300 dark:border-neutral-700 text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                >
+                  <Download size={15} /> Unduh PDF
                 </button>
-                <button onClick={handleWhatsApp} className="flex-[2] flex items-center justify-center gap-2 py-3 rounded-xl bg-success-500 text-white text-sm font-bold hover:bg-green-600">
-                  <MessageCircle size={16} /> Kirim ke WhatsApp
+                <button
+                  onClick={handleWhatsApp}
+                  className="flex-[2] flex items-center justify-center gap-1.5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-colors"
+                >
+                  <MessageCircle size={15} /> Kirim ke WhatsApp
                 </button>
               </div>
             </div>
           )}
-
-          {order.status === 'DIBATALKAN' && order.cancelled_reason && (
-            <div className="card p-4 bg-red-50 border-red-200 text-sm text-red-700">
-              <strong>Alasan Pembatalan:</strong> {order.cancelled_reason}
-            </div>
-          )}
         </div>
       )}
 
-      {/* If no order searched yet */}
       {!order && !notFound && !loading && !initialCode && (
-        <div className="card p-8 text-center text-neutral-400 text-sm">
-          Masukkan kode invoice di atas untuk melacak pesanan kamu.
+        <div className="card p-8 text-center text-neutral-400 text-xs">
+          Masukkan kode invoice yang tertera di bukti pemesanan untuk melihat status pesanan.
         </div>
       )}
-
-      <div className="mt-6 text-center">
-        <Link href="/" className="text-sm text-brand-600 hover:underline">
-          ← Kembali ke Katalog
-        </Link>
-      </div>
     </div>
   );
 }
@@ -199,7 +275,7 @@ function OrderTrackingContent() {
 export default function OrderTrackingPage() {
   return (
     <CustomerPageWrapper>
-      <Suspense fallback={<div className="p-8 text-center text-neutral-400">Memuat...</div>}>
+      <Suspense fallback={<div className="p-8 text-center text-neutral-400 text-sm">Memuat data...</div>}>
         <OrderTrackingContent />
       </Suspense>
     </CustomerPageWrapper>
