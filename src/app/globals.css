@@ -165,6 +165,35 @@ h1, h2, h3, h4, h5, h6 {
          transition-colors font-medium text-xs;
 }
 
+/* Bankzai Custom Card & UI Styles */
+.bankzai-card {
+  @apply bg-white dark:bg-[#12141a] rounded-[24px] border border-slate-200/80 dark:border-white/[0.08] shadow-sm shadow-slate-200/40 dark:shadow-none transition-all;
+}
+
+.bankzai-stat-card {
+  @apply bg-white dark:bg-[#12141a] rounded-[22px] p-5 border border-slate-200/80 dark:border-white/[0.08] relative overflow-hidden transition-all hover:border-blue-500/30 hover:shadow-md;
+}
+
+.bankzai-badge {
+  @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold tracking-tight;
+}
+
+.bankzai-badge-completed {
+  @apply bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20;
+}
+
+.bankzai-badge-pending {
+  @apply bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20;
+}
+
+.bankzai-badge-canceled {
+  @apply bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20;
+}
+
+.bankzai-badge-processing {
+  @apply bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 5px;
@@ -178,3 +207,4 @@ h1, h2, h3, h4, h5, h6 {
 ::-webkit-scrollbar-thumb {
   @apply bg-neutral-300 dark:bg-neutral-700 rounded-full hover:bg-neutral-400 dark:hover:bg-neutral-600;
 }
+
