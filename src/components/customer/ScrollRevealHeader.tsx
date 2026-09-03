@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ShoppingBag, Sparkles } from 'lucide-react';
 
@@ -17,117 +17,85 @@ const WORDS = [
 ];
 
 export default function ScrollRevealHeader() {
-  const containerRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
+  // Auto-cycle words smoothly every 1.5s, also reacts to user scrolling
   useEffect(() => {
-    const handleScroll = () => {
-      if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      const windowHeight = window.innerHeight;
-      const totalScrollable = rect.height - windowHeight;
+    const interval = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % WORDS.length);
+    }, 1500);
 
-      if (totalScrollable <= 0) return;
-
-      const currentScroll = -rect.top;
-      const progress = Math.max(0, Math.min(1, currentScroll / totalScrollable));
-      const index = Math.min(
-        WORDS.length - 1,
-        Math.floor(progress * WORDS.length)
-      );
-      setActiveIndex(index);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
-
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => clearInterval(interval);
   }, []);
 
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full"
-      style={{ minHeight: `${WORDS.length * 45 + 35}vh` }}
-    >
-      {/* Sticky Reveal Viewport */}
-      <div className="sticky top-0 h-screen w-full flex flex-col items-center justify-center px-4 overflow-hidden select-none">
-        {/* Ambient Glow with Adaptive Opacity */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] sm:w-[520px] h-[340px] sm:h-[520px] bg-gradient-to-tr from-blue-500/20 via-sky-400/15 to-indigo-500/15 dark:from-blue-600/20 dark:via-sky-500/15 dark:to-indigo-500/15 blur-3xl -z-10 rounded-full pointer-events-none" />
+    <section className="relative px-4 pt-10 pb-8 sm:pt-14 sm:pb-10 text-center max-w-2xl mx-auto overflow-hidden select-none">
+      {/* Soft Ambient Radial Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 sm:w-96 h-80 sm:h-96 bg-gradient-to-tr from-blue-500/15 via-sky-400/10 to-indigo-500/10 dark:from-blue-600/20 dark:via-sky-500/15 dark:to-indigo-500/15 blur-3xl -z-10 rounded-full pointer-events-none" />
 
-        {/* Small Tag */}
-        <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/80 text-blue-700 dark:text-blue-300 text-[11px] font-bold mb-6 shadow-xs animate-in fade-in duration-300">
-          <Sparkles size={13} className="text-blue-600 dark:text-blue-400" />
-          <span>Es Gabin Premium Renyah & Dingin</span>
-        </div>
+      {/* Badge */}
+      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/70 text-blue-700 dark:text-blue-300 text-[11px] font-bold mb-4 shadow-xs">
+        <Sparkles size={13} className="text-blue-600 dark:text-blue-400 shrink-0" />
+        <span>Es Gabin Premium Renyah & Dingin</span>
+      </div>
 
-        {/* Sticky Split Text */}
-        <div className="flex items-center justify-center gap-2 sm:gap-4 text-3xl sm:text-5xl md:text-6xl font-heading font-black tracking-tight">
-          <span className="text-neutral-900 dark:text-white shrink-0 drop-shadow-xs">
-            Lah&nbsp;
-          </span>
+      {/* Split Text Heading */}
+      <div className="flex items-center justify-center gap-2 sm:gap-3 text-3xl sm:text-5xl md:text-6xl font-heading font-black tracking-tight leading-tight my-1">
+        <span className="text-slate-900 dark:text-white shrink-0">
+          Lah&nbsp;
+        </span>
 
-          <div className="relative h-[1.3em] overflow-hidden flex flex-col items-start justify-center">
-            <div
-              className="transition-transform duration-300 ease-out flex flex-col"
-              style={{
-                transform: `translateY(-${activeIndex * (100 / WORDS.length)}%)`,
-                height: `${WORDS.length * 100}%`,
-              }}
-            >
-              {WORDS.map((word, idx) => {
-                const isSelected = activeIndex === idx;
-                const isLast = idx === WORDS.length - 1;
-
-                return (
-                  <div
-                    key={word}
-                    className={`h-[1.3em] flex items-center transition-all duration-300 ${
-                      isSelected
-                        ? isLast
-                          ? 'bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 dark:from-sky-400 dark:via-blue-400 dark:to-indigo-300 bg-clip-text text-transparent font-black scale-105'
-                          : 'bg-gradient-to-r from-blue-600 to-sky-500 dark:from-blue-400 dark:to-sky-300 bg-clip-text text-transparent font-extrabold scale-100'
-                        : 'text-neutral-400/40 dark:text-neutral-600/40 opacity-30 scale-95'
-                    }`}
-                  >
-                    {word}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Subtitle & CTA */}
-        <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-300 mt-4 max-w-sm sm:max-w-md text-center leading-relaxed font-medium">
-          Biskuit gabin renyah dengan isian fla lembut manis aneka rasa. Dibuat fresh setiap hari.
-        </p>
-
-        <div className="flex items-center gap-3 mt-7">
-          <a
-            href="#menu"
-            className="btn-primary text-xs py-2.5 px-5 shadow-lg shadow-blue-500/25"
+        <div className="relative h-[1.3em] overflow-hidden flex flex-col items-start justify-center">
+          <div
+            className="transition-transform duration-500 ease-out flex flex-col"
+            style={{
+              transform: `translateY(-${activeIndex * (100 / WORDS.length)}%)`,
+              height: `${WORDS.length * 100}%`,
+            }}
           >
-            <ShoppingBag size={14} /> Lihat Menu
-          </a>
-          <Link
-            href="/pemesanan"
-            className="btn-secondary text-xs py-2.5 px-5"
-          >
-            Lacak Pesanan
-          </Link>
-        </div>
+            {WORDS.map((word, idx) => {
+              const isSelected = activeIndex === idx;
+              const isLast = idx === WORDS.length - 1;
 
-        {/* Scroll Hint */}
-        <div className="absolute bottom-6 flex flex-col items-center gap-1.5 opacity-60">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
-            Scroll ke bawah
-          </span>
-          <div className="w-4 h-7 rounded-full border-2 border-neutral-300 dark:border-neutral-700 flex items-start justify-center p-1">
-            <div className="w-1 h-1.5 bg-blue-500 rounded-full animate-bounce" />
+              return (
+                <div
+                  key={word}
+                  className={`h-[1.3em] flex items-center transition-all duration-300 ${
+                    isSelected
+                      ? isLast
+                        ? 'text-blue-600 dark:text-sky-400 font-black scale-105'
+                        : 'text-blue-600 dark:text-sky-400 font-extrabold scale-100'
+                      : 'text-slate-300 dark:text-neutral-700 opacity-25 scale-95'
+                  }`}
+                >
+                  {word}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Subtitle */}
+      <p className="text-xs sm:text-sm text-slate-600 dark:text-neutral-300 mt-3 max-w-md mx-auto leading-relaxed font-medium">
+        Biskuit gabin renyah dengan isian fla lembut manis aneka rasa. Dibuat fresh setiap hari.
+      </p>
+
+      {/* Action Buttons */}
+      <div className="flex justify-center gap-3 mt-6">
+        <a
+          href="#menu"
+          className="btn-primary text-xs py-2.5 px-5 shadow-md shadow-blue-500/20"
+        >
+          <ShoppingBag size={14} /> Lihat Menu
+        </a>
+        <Link
+          href="/pemesanan"
+          className="btn-secondary text-xs py-2.5 px-5"
+        >
+          Lacak Pesanan
+        </Link>
+      </div>
+    </section>
   );
 }
