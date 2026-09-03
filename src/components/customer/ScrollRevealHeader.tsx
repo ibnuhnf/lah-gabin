@@ -51,7 +51,7 @@ export default function ScrollRevealHeader() {
 
       {/* Centered Dynamic Split Text Heading */}
       <div className="flex items-center justify-center gap-2 sm:gap-3 text-3xl sm:text-5xl md:text-6xl font-heading font-black tracking-tight leading-tight my-1 text-center">
-        <span className="text-slate-900 dark:text-white shrink-0">
+        <span className="text-blue-600 dark:text-white shrink-0">
           Lah
         </span>
 
