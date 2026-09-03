@@ -26,56 +26,8 @@ interface Order {
   created_at: string;
 }
 
-const FALLBACK_ORDERS: Order[] = [
-  {
-    id: '1',
-    invoice_code: 'LG-20260902-A1B2',
-    customer_name: 'Budi Santoso',
-    customer_wa: '628123456789',
-    customer_address: 'Jl. Melati No. 4, Blok B',
-    final_amount: 35000,
-    status: 'SELESAI',
-    items: [{ product_name: 'Es Gabin Tiramisu', quantity: 5, subtotal: 35000 }],
-    created_at: '2026-09-02T10:30:00Z',
-  },
-  {
-    id: '2',
-    invoice_code: 'LG-20260902-C3D4',
-    customer_name: 'Siti Aminah',
-    customer_wa: '628123456780',
-    customer_address: 'Perum Taman Asri Blok C-12',
-    final_amount: 18000,
-    status: 'DIBATALKAN',
-    cancellation_reason: 'Stok bahan baku oreo habis',
-    items: [{ product_name: 'Es Gabin Oreo', quantity: 3, subtotal: 18000 }],
-    created_at: '2026-09-02T11:15:00Z',
-  },
-  {
-    id: '3',
-    invoice_code: 'LG-20260901-X9Y8',
-    customer_name: 'Andi Wijaya',
-    customer_wa: '628123456777',
-    customer_address: 'Jl. Merpati Putih No. 10',
-    final_amount: 22000,
-    status: 'DITERIMA_PROSES',
-    items: [
-      { product_name: 'Es Gabin Coklat', quantity: 2, subtotal: 10000 },
-      { product_name: 'Es Gabin Keju', quantity: 2, subtotal: 11000 },
-    ],
-    created_at: '2026-09-01T14:20:00Z',
-  },
-  {
-    id: '4',
-    invoice_code: 'LG-20260901-W7W6',
-    customer_name: 'Dewi Lestari',
-    customer_wa: '628123456766',
-    customer_address: 'Komplek Griya Indah No. 8',
-    final_amount: 12000,
-    status: 'SELESAI',
-    items: [{ product_name: 'Es Gabin Original', quantity: 3, subtotal: 12000 }],
-    created_at: '2026-09-01T09:45:00Z',
-  },
-];
+// Reset: daftar pesanan riwayat kosong
+const FALLBACK_ORDERS: Order[] = [];
 
 const STATUS_BADGE: Record<string, string> = {
   PENDING_APPROVAL: 'badge-pending',

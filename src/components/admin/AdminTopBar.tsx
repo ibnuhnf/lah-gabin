@@ -146,32 +146,9 @@ export default function AdminTopBar({
                     <h3 className="font-heading font-bold text-sm text-neutral-900 dark:text-white">
                       Notifikasi
                     </h3>
-                    <span className="text-[11px] bg-rose-500/10 text-rose-600 dark:text-rose-400 px-2 py-0.5 rounded-full font-bold">
-                      3 Baru
-                    </span>
                   </div>
-                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-white/[0.05]">
-                    <NotifItem
-                      icon="📦"
-                      title="Pesanan Baru"
-                      desc="Pesanan LG-20260904-X1Y2 dari Siti Aminah"
-                      time="2 menit lalu"
-                      tone="blue"
-                    />
-                    <NotifItem
-                      icon="⚠️"
-                      title="Stok Kritis"
-                      desc="Es Gabin Tiramisu hampir habis"
-                      time="1 jam lalu"
-                      tone="amber"
-                    />
-                    <NotifItem
-                      icon="✅"
-                      title="Pembayaran Diterima"
-                      desc="LG-20260903-B7C8 lunas sebesar Rp 35.000"
-                      time="3 jam lalu"
-                      tone="emerald"
-                    />
+                  <div className="p-8 text-center text-xs text-neutral-500 dark:text-neutral-400">
+                    Tidak ada notifikasi
                   </div>
                 </div>
               </>

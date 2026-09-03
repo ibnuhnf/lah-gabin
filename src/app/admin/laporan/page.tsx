@@ -8,15 +8,15 @@ export default function AdminReportsPage() {
   const [month, setMonth] = useState('2026-09');
 
   const reportData = {
-    omzet_total: 8750000,
-    hpp_total: 3500000,
-    laba_kotor: 5250000,
-    biaya_operasional: 1200000,
-    laba_bersih: 4050000,
-    total_unit_terjual: 245,
+    omzet_total: 0,
+    hpp_total: 0,
+    laba_kotor: 0,
+    biaya_operasional: 0,
+    laba_bersih: 0,
+    total_unit_terjual: 0,
     channel_breakdown: [
-      { name: 'Online (Web & WA)', omzet: 5250000, unit: 145 },
-      { name: 'POS / Kasir Langsung', omzet: 3500000, unit: 100 },
+      { name: 'Online (Web & WA)', omzet: 0, unit: 0 },
+      { name: 'POS / Kasir Langsung', omzet: 0, unit: 0 },
     ],
   };
 
