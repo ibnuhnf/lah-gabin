@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { ShoppingBag, Sparkles } from 'lucide-react';
 
@@ -19,19 +19,24 @@ const WORDS = [
 export default function ScrollRevealHeader() {
   const [index, setIndex] = useState(0);
   const [visible, setVisible] = useState(true);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const tick = () => {
+    const isLastWord = index === WORDS.length - 1;
+    const currentDuration = isLastWord ? 2800 : 1200; // Tampilkan 'Gabin!' lebih lama (2.8 detik)
+
+    timerRef.current = setTimeout(() => {
       setVisible(false);
       setTimeout(() => {
         setIndex((prev) => (prev + 1) % WORDS.length);
         setVisible(true);
-      }, 180);
-    };
+      }, 150);
+    }, currentDuration);
 
-    const interval = setInterval(tick, 1400);
-    return () => clearInterval(interval);
-  }, []);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [index]);
 
   return (
     <section className="relative px-4 pt-10 pb-8 sm:pt-14 sm:pb-10 text-center max-w-2xl mx-auto overflow-hidden select-none">
@@ -44,24 +49,22 @@ export default function ScrollRevealHeader() {
         <span>Es Gabin Premium Renyah & Dingin</span>
       </div>
 
-      {/* Split Text Heading */}
-      <div className="flex items-center justify-center gap-2 sm:gap-3 text-3xl sm:text-5xl md:text-6xl font-heading font-black tracking-tight leading-tight my-1">
+      {/* Centered Dynamic Split Text Heading */}
+      <div className="flex items-center justify-center gap-2 sm:gap-3 text-3xl sm:text-5xl md:text-6xl font-heading font-black tracking-tight leading-tight my-1 text-center">
         <span className="text-slate-900 dark:text-white shrink-0">
-          Lah&nbsp;
+          Lah
         </span>
 
-        <div className="relative h-[1.3em] inline-flex items-center justify-start min-w-[6.5em]">
-          <span
-            key={index}
-            className={`inline-block transition-all duration-200 ease-out ${
-              visible
-                ? 'opacity-100 translate-y-0'
-                : 'opacity-0 -translate-y-2'
-            } text-blue-600 dark:text-white font-extrabold`}
-          >
-            {WORDS[index]}
-          </span>
-        </div>
+        <span
+          key={index}
+          className={`inline-block transition-all duration-150 ease-out text-center ${
+            visible
+              ? 'opacity-100 scale-100'
+              : 'opacity-0 scale-95'
+          } text-blue-600 dark:text-white font-extrabold`}
+        >
+          {WORDS[index]}
+        </span>
       </div>
 
       {/* Subtitle */}
