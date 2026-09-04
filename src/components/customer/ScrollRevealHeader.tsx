@@ -50,14 +50,14 @@ export default function ScrollRevealHeader() {
         <span>Es Gabin Premium Renyah & Dingin</span>
       </div>
 
-      {/* Dynamic Animated Area (Text Cycle -> Enlarged Middle Logo +80%) */}
-      <div className="min-h-[112px] sm:min-h-[144px] md:min-h-[176px] flex items-center justify-center my-2 text-center">
+      {/* Dynamic Animated Area (Text Cycle -> Enlarged Middle Logo 3x) */}
+      <div className="min-h-[160px] sm:min-h-[224px] md:min-h-[256px] flex items-center justify-center my-3 text-center">
         {isLastItem ? (
           <img
             key="logo-middle"
             src="/img/lag gabin middle.svg"
             alt="Lah Gabin!"
-            className={`h-28 sm:h-36 md:h-44 w-auto object-contain transition-all duration-300 ease-out drop-shadow-md ${
+            className={`h-40 sm:h-56 md:h-64 max-w-[92vw] sm:max-w-md md:max-w-lg w-auto object-contain transition-all duration-300 ease-out drop-shadow-xl ${
               visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
             }`}
           />
