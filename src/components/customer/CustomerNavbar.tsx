@@ -16,13 +16,17 @@ export default function CustomerNavbar() {
     <header className="sticky top-0 z-50 bg-white/85 dark:bg-neutral-950/85 backdrop-blur-2xl border-b border-slate-200/70 dark:border-neutral-800 transition-colors">
       <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
         {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center text-white font-heading font-bold text-xs shadow-md shadow-blue-500/30 group-hover:scale-105 transition-transform">
-            LG
-          </div>
-          <span className="font-heading font-bold text-sm tracking-tight text-neutral-900 dark:text-white">
-            Lah Gabin
-          </span>
+        <Link href="/" className="flex items-center gap-2 group">
+          <img
+            src="/img/logo.svg"
+            alt="Lah Gabin Logo"
+            className="w-8 h-8 rounded-xl object-contain shadow-sm group-hover:scale-105 transition-transform"
+          />
+          <img
+            src="/img/logo navbar.svg"
+            alt="Lah Gabin"
+            className="h-6 w-auto object-contain dark:brightness-110"
+          />
         </Link>
 
         {/* Right Nav Actions */}

@@ -49,22 +49,18 @@ export default function ScrollRevealHeader() {
         <span>Es Gabin Premium Renyah & Dingin</span>
       </div>
 
-      {/* Centered Dynamic Split Text Heading */}
-      <div className="flex items-center justify-center gap-2 sm:gap-3 text-3xl sm:text-5xl md:text-6xl font-heading font-black tracking-tight leading-tight my-1 text-center">
-        <span className="text-blue-600 dark:text-white shrink-0">
-          Lah
-        </span>
-
-        <span
+      {/* Centered Logo Animation (Dynamic Fade & Scale) */}
+      <div className="flex items-center justify-center my-1 text-center">
+        <img
           key={index}
-          className={`inline-block transition-all duration-150 ease-out text-center ${
+          src="/img/lag gabin middle.svg"
+          alt={`Lah Gabin ${WORDS[index]}`}
+          className={`h-16 sm:h-20 md:h-24 w-auto object-contain transition-all duration-300 ease-out ${
             visible
               ? 'opacity-100 scale-100'
               : 'opacity-0 scale-95'
-          } text-blue-600 dark:text-white font-extrabold`}
-        >
-          {WORDS[index]}
-        </span>
+          }`}
+        />
       </div>
 
       {/* Subtitle */}

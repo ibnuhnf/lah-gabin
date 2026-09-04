@@ -94,9 +94,11 @@ export default function AdminSidebar({
             href="/admin/dashboard"
             className="flex items-center gap-3 group overflow-hidden"
           >
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-blue-500 to-sky-400 flex items-center justify-center text-white font-heading font-black text-base shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform shrink-0">
-              LG
-            </div>
+            <img
+              src="/img/logo.svg"
+              alt="Lah Gabin Logo"
+              className="w-10 h-10 rounded-2xl object-contain shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform shrink-0"
+            />
             {!collapsed && (
               <div className="min-w-0">
                 <p className="font-heading font-extrabold text-sm text-neutral-900 dark:text-white tracking-tight leading-tight truncate">
