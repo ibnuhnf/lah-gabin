@@ -134,8 +134,8 @@ function OrderTrackingContent() {
     setLoading(false);
   }
 
-  function handleDownloadPDF(order: Order) {
-    downloadInvoicePDF({
+  async function handleDownloadPDF(order: Order) {
+    await downloadInvoicePDF({
       order,
       bankAccount: config?.bank_account_info || undefined,
     });
