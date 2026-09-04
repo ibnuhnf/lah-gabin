@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { formatRupiah } from '@/lib/utils';
 import {
   ArrowUpRight,
@@ -16,6 +16,9 @@ import {
   TrendingUp,
   TrendingDown,
   DollarSign,
+  Trash2,
+  Pencil,
+  CheckCircle2,
 } from 'lucide-react';
 
 interface CashTransaction {
@@ -31,11 +34,30 @@ interface CashTransaction {
 const INITIAL_TRANSACTIONS: CashTransaction[] = [];
 
 const INITIAL_BALANCE = 0;
+const STORAGE_KEY = 'lah_gabin_cash_transactions';
 
 export default function AdminCashPage() {
   const [transactions, setTransactions] = useState<CashTransaction[]>(INITIAL_TRANSACTIONS);
   const [period, setPeriod] = useState<'this_month' | 'last_month' | 'all'>('this_month');
   const [addModal, setAddModal] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [notification, setNotification] = useState<string | null>(null);
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) setTransactions(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  // Persist helper
+  const persist = (next: CashTransaction[]) => {
+    setTransactions(next);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {}
+  };
 
   // Form State
   const [form, setForm] = useState({
@@ -85,18 +107,62 @@ export default function AdminCashPage() {
     e.preventDefault();
     if (!form.amount || !form.description) return;
 
-    const newTx: CashTransaction = {
-      id: crypto.randomUUID(),
-      type: form.type,
-      amount: Number(form.amount) || 0,
-      category: form.category,
-      description: form.description,
-      time: new Date().toISOString().replace('T', ' ').slice(0, 16),
-    };
+    if (editId) {
+      const updated = transactions.map((t) =>
+        t.id === editId
+          ? {
+              ...t,
+              type: form.type,
+              amount: Number(form.amount) || 0,
+              category: form.category,
+              description: form.description,
+            }
+          : t
+      );
+      persist(updated);
+      setEditId(null);
+      setNotification('Transaksi kas berhasil diperbarui.');
+    } else {
+      const newTx: CashTransaction = {
+        id: crypto.randomUUID(),
+        type: form.type,
+        amount: Number(form.amount) || 0,
+        category: form.category,
+        description: form.description,
+        time: new Date().toISOString().replace('T', ' ').slice(0, 16),
+      };
+      persist([newTx, ...transactions]);
+      setNotification('Transaksi kas berhasil ditambahkan.');
+    }
 
-    setTransactions([newTx, ...transactions]);
     setAddModal(false);
     setForm({ type: 'IN', amount: '', category: 'PENJUALAN_POS', description: '' });
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  const startEdit = (t: CashTransaction) => {
+    setEditId(t.id);
+    setForm({
+      type: t.type,
+      amount: String(t.amount),
+      category: t.category,
+      description: t.description,
+    });
+    setAddModal(true);
+  };
+
+  const handleDeleteTransaction = (id: string) => {
+    if (!window.confirm('Yakin ingin menghapus catatan kas ini?')) return;
+    const updated = transactions.filter((t) => t.id !== id);
+    persist(updated);
+    setNotification('Transaksi kas berhasil dihapus.');
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  const openAddModal = () => {
+    setEditId(null);
+    setForm({ type: 'IN', amount: '', category: 'PENJUALAN_POS', description: '' });
+    setAddModal(true);
   };
 
   const setPresetAmount = (amt: number) => {
@@ -105,6 +171,14 @@ export default function AdminCashPage() {
 
   return (
     <div className="space-y-6">
+      {/* Toast Notification */}
+      {notification && (
+        <div className="fixed top-5 right-5 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 text-sm font-bold animate-in fade-in">
+          <CheckCircle2 size={16} />
+          {notification}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -117,7 +191,7 @@ export default function AdminCashPage() {
         </div>
 
         <button
-          onClick={() => setAddModal(true)}
+          onClick={openAddModal}
           className="btn-primary text-xs shadow-md"
         >
           <Plus size={16} /> Catat Mutasi Baru
@@ -378,6 +452,9 @@ export default function AdminCashPage() {
                 <th className="px-3 pb-3 text-[10px] font-extrabold uppercase tracking-wider text-neutral-400 text-right">
                   Nominal
                 </th>
+                <th className="px-3 pb-3 text-[10px] font-extrabold uppercase tracking-wider text-neutral-400 text-right">
+                  Aksi
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -417,12 +494,30 @@ export default function AdminCashPage() {
                   >
                     {t.type === 'IN' ? '+' : '-'} {formatRupiah(t.amount)}
                   </td>
+                  <td className="px-3 py-3 text-right">
+                    <div className="flex justify-end gap-1">
+                      <button
+                        onClick={() => startEdit(t)}
+                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-blue-100 dark:bg-white/[0.05] dark:hover:bg-blue-950/50 text-neutral-500 hover:text-blue-600 dark:hover:text-blue-400 transition-all active:scale-95"
+                        title="Edit Transaksi"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTransaction(t.id)}
+                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-100 dark:bg-white/[0.05] dark:hover:bg-rose-950/50 text-neutral-500 hover:text-rose-600 dark:hover:text-rose-400 transition-all active:scale-95"
+                        title="Hapus Transaksi"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
               {filteredTransactions.length === 0 && (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="text-center py-10 text-xs text-neutral-400 font-medium"
                   >
                     Tidak ada transaksi pada periode ini.
@@ -440,7 +535,7 @@ export default function AdminCashPage() {
           <div className="bankzai-card p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-heading font-bold text-base text-neutral-900 dark:text-white">
-                Catat Transaksi Kas
+                {editId ? 'Edit Transaksi Kas' : 'Catat Transaksi Kas'}
               </h3>
               <button
                 onClick={() => setAddModal(false)}

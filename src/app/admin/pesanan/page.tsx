@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Check, X, ChevronRight, MessageCircle, Clock, CheckCircle2, XCircle, MapPin } from 'lucide-react';
+import { Check, X, ChevronRight, MessageCircle, Clock, CheckCircle2, XCircle, MapPin, Trash2 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { formatRupiah } from '@/lib/utils';
 
@@ -50,6 +50,7 @@ export default function AdminOrdersPage() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [cancelModal, setCancelModal] = useState<{ id: string; name: string } | null>(null);
   const [cancelReason, setCancelReason] = useState('');
+  const [deleteModal, setDeleteModal] = useState<{ id: string; name: string; invoice: string } | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
 
   useEffect(() => {
@@ -150,6 +151,33 @@ export default function AdminOrdersPage() {
     setCancelModal(null);
     setCancelReason('');
     setNotification('Pesanan berhasil dibatalkan.');
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteModal) return;
+
+    const targetId = deleteModal.id;
+    const targetInvoice = deleteModal.invoice;
+    const updated = orders.filter((o) => o.id !== targetId);
+    setOrders(updated);
+
+    try {
+      localStorage.setItem('lah_gabin_admin_orders', JSON.stringify(updated));
+      if (targetInvoice) {
+        localStorage.removeItem(`lah_gabin_order_${targetInvoice}`);
+      }
+    } catch {}
+
+    if (isSupabaseConfigured()) {
+      try {
+        await supabase.from('order_items').delete().eq('order_id', targetId);
+        await supabase.from('orders').delete().eq('id', targetId);
+      } catch {}
+    }
+
+    setDeleteModal(null);
+    setNotification('Pesanan berhasil dihapus.');
     setTimeout(() => setNotification(null), 3000);
   };
 
@@ -317,6 +345,13 @@ export default function AdminOrdersPage() {
                             ✓ Lunas
                           </span>
                         )}
+                        <button
+                          onClick={() => setDeleteModal({ id: order.id, name: order.customer_name, invoice: order.invoice_code })}
+                          className="p-1.5 rounded-xl bg-neutral-100 hover:bg-rose-100 dark:bg-neutral-800 dark:hover:bg-rose-950/50 text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 transition-all active:scale-95"
+                          title="Hapus Pesanan"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -326,6 +361,39 @@ export default function AdminOrdersPage() {
           </table>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-neutral-200 dark:border-neutral-800 animate-in fade-in zoom-in-95">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-3">
+              <Trash2 size={24} />
+            </div>
+            <h3 className="font-heading font-bold text-lg text-neutral-900 dark:text-white mb-1">
+              Hapus Pesanan?
+            </h3>
+            <p className="text-xs text-neutral-500 mb-4 font-medium leading-relaxed">
+              Pesanan <span className="font-mono font-bold text-neutral-800 dark:text-neutral-200">{deleteModal.invoice}</span> atas nama <strong>{deleteModal.name}</strong> akan dihapus permanen dari daftar dan riwayat.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteModal(null)}
+                className="flex-1 py-2.5 rounded-2xl border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold hover:bg-neutral-50 dark:hover:bg-neutral-800"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="flex-1 py-2.5 rounded-2xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 shadow-md active:scale-95"
+              >
+                Ya, Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cancel Modal */}
       {cancelModal && (
