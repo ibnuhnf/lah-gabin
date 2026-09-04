@@ -34,6 +34,9 @@ export default function AdminDashboardPage() {
   const [period, setPeriod] = useState<'today' | 'this_month'>('today');
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [cashTransactions, setCashTransactions] = useState<
+    { id: string; type: 'IN' | 'OUT'; amount: number; time: string }[]
+  >([]);
 
   useEffect(() => {
     try {
@@ -45,6 +48,26 @@ export default function AdminDashboardPage() {
       const savedProducts = localStorage.getItem('lah_gabin_admin_products');
       if (savedProducts) setProducts(JSON.parse(savedProducts));
     } catch {}
+
+    try {
+      const savedCash = localStorage.getItem('lah_gabin_cash_transactions');
+      if (savedCash) setCashTransactions(JSON.parse(savedCash));
+    } catch {}
+
+    function syncFromStorage(e: StorageEvent) {
+      if (e.key === 'lah_gabin_admin_orders' && e.newValue) {
+        try {
+          setOrders(JSON.parse(e.newValue));
+        } catch {}
+      }
+      if (e.key === 'lah_gabin_cash_transactions' && e.newValue) {
+        try {
+          setCashTransactions(JSON.parse(e.newValue));
+        } catch {}
+      }
+    }
+    window.addEventListener('storage', syncFromStorage);
+    return () => window.removeEventListener('storage', syncFromStorage);
 
     async function loadData() {
       if (isSupabaseConfigured()) {
@@ -90,7 +113,12 @@ export default function AdminDashboardPage() {
   const hppTotal = Math.round(omzet * 0.35);
   const labaKotor = omzet - hppTotal;
   const labaBersih = Math.max(0, labaKotor);
-  const saldoKas = omzet;
+
+  // Hitung saldo kas dari mutasi kas riil di localStorage
+  const totalCashIn = cashTransactions.filter((t) => t.type === 'IN').reduce((s, t) => s + t.amount, 0);
+  const totalCashOut = cashTransactions.filter((t) => t.type === 'OUT').reduce((s, t) => s + t.amount, 0);
+  const saldoKas = totalCashIn - totalCashOut;
+
   const totalPengeluaran = periodOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
 
   const activeQueue = orders.filter(
@@ -204,9 +232,9 @@ export default function AdminDashboardPage() {
         <KPICard
           title="Pemasukan"
           icon={<DollarSign size={18} />}
-          value={formatRupiah(omzet > 0 ? omzet : period === 'today' ? 450000 : 8750000)}
-          trend="up"
-          trendText={`${totalTransactions > 0 ? totalTransactions : period === 'today' ? 12 : 245} transaksi lunas`}
+          value={formatRupiah(omzet)}
+          trend={omzet > 0 ? "up" : "down"}
+          trendText={`${totalTransactions} transaksi lunas`}
           color="blue"
           trendIcon={<ArrowUpRight size={13} />}
         />
@@ -222,8 +250,8 @@ export default function AdminDashboardPage() {
         <KPICard
           title="Pesanan"
           icon={<ShoppingCart size={18} />}
-          value={`${orders.length || (period === 'today' ? 18 : 312)}`}
-          trend="up"
+          value={`${periodOrders.length}`}
+          trend={periodOrders.length > 0 ? "up" : "down"}
           trendText={`${activeQueue.length} antrean aktif`}
           color="amber"
           trendIcon={<Clock size={13} />}
@@ -232,7 +260,7 @@ export default function AdminDashboardPage() {
           title="Saldo Kas"
           icon={<DollarSign size={18} />}
           value={formatRupiah(saldoKas)}
-          trend="up"
+          trend={saldoKas >= 0 ? "up" : "down"}
           trendText="Saldo tersedia sekarang"
           color="emerald"
           trendIcon={<Zap size={13} />}
