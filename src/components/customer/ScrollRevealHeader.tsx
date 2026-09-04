@@ -13,7 +13,7 @@ const WORDS = [
   'kenyang.',
   'manis.',
   'banyak rasa.',
-  'Gabin!',
+  '__LOGO__',
 ];
 
 export default function ScrollRevealHeader() {
@@ -21,22 +21,23 @@ export default function ScrollRevealHeader() {
   const [visible, setVisible] = useState(true);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const isLastItem = index === WORDS.length - 1;
+
   useEffect(() => {
-    const isLastWord = index === WORDS.length - 1;
-    const currentDuration = isLastWord ? 2800 : 1200; // Tampilkan 'Gabin!' lebih lama (2.8 detik)
+    const currentDuration = isLastItem ? 3200 : 1200; // Tampilkan logo middle lebih lama (3.2 detik)
 
     timerRef.current = setTimeout(() => {
       setVisible(false);
       setTimeout(() => {
         setIndex((prev) => (prev + 1) % WORDS.length);
         setVisible(true);
-      }, 150);
+      }, 180);
     }, currentDuration);
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [index]);
+  }, [index, isLastItem]);
 
   return (
     <section className="relative px-4 pt-10 pb-8 sm:pt-14 sm:pb-10 text-center max-w-2xl mx-auto overflow-hidden select-none">
@@ -49,18 +50,30 @@ export default function ScrollRevealHeader() {
         <span>Es Gabin Premium Renyah & Dingin</span>
       </div>
 
-      {/* Centered Logo Animation (Dynamic Fade & Scale) */}
-      <div className="flex items-center justify-center my-1 text-center">
-        <img
-          key={index}
-          src="/img/lag gabin middle.svg"
-          alt={`Lah Gabin ${WORDS[index]}`}
-          className={`h-16 sm:h-20 md:h-24 w-auto object-contain transition-all duration-300 ease-out ${
-            visible
-              ? 'opacity-100 scale-100'
-              : 'opacity-0 scale-95'
-          }`}
-        />
+      {/* Dynamic Animated Area (Text Cycle -> Enlarged Middle Logo) */}
+      <div className="min-h-[64px] sm:min-h-[84px] md:min-h-[100px] flex items-center justify-center my-1 text-center">
+        {isLastItem ? (
+          <img
+            key="logo-middle"
+            src="/img/lag gabin middle.svg"
+            alt="Lah Gabin!"
+            className={`h-16 sm:h-22 md:h-26 w-auto object-contain transition-all duration-300 ease-out ${
+              visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+            }`}
+          />
+        ) : (
+          <div
+            key={index}
+            className={`flex items-center justify-center gap-2 sm:gap-3 text-3xl sm:text-5xl md:text-6xl font-heading font-black tracking-tight leading-tight transition-all duration-200 ease-out ${
+              visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+            }`}
+          >
+            <span className="text-blue-600 dark:text-white shrink-0">Lah</span>
+            <span className="text-blue-600 dark:text-white font-extrabold">
+              {WORDS[index]}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Subtitle */}

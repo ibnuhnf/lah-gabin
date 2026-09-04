@@ -16,16 +16,16 @@ export default function CustomerNavbar() {
     <header className="sticky top-0 z-50 bg-white/85 dark:bg-neutral-950/85 backdrop-blur-2xl border-b border-slate-200/70 dark:border-neutral-800 transition-colors">
       <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
         {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-2 group">
+        <Link href="/" className="flex items-center gap-2.5 group">
           <img
             src="/img/logo.svg"
             alt="Lah Gabin Logo"
-            className="w-8 h-8 rounded-xl object-contain shadow-sm group-hover:scale-105 transition-transform"
+            className="w-9 h-9 rounded-xl object-contain shadow-sm group-hover:scale-105 transition-transform shrink-0"
           />
           <img
             src="/img/logo navbar.svg"
             alt="Lah Gabin"
-            className="h-6 w-auto object-contain dark:brightness-110"
+            className="h-8 sm:h-9 w-auto object-contain dark:brightness-110"
           />
         </Link>
 
