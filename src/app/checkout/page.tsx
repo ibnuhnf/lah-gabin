@@ -11,7 +11,8 @@ import { formatRupiah } from '@/lib/utils';
 import { validateVoucher, consumeVoucherQuota, generateInvoiceCode } from '@/lib/orders';
 import { normalizeIndonesianPhone, isValidIndonesianPhone } from '@/lib/whatsapp';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import type { Voucher } from '@/types';
+import type { Voucher, BarVariant } from '@/types';
+import { BAR_VARIANT_LABELS } from '@/types';
 
 type DeliveryZone = 'LUAR_PERUM' | 'DALAM_PERUM';
 
@@ -76,6 +77,12 @@ export default function CheckoutPage() {
       setFormError('Keranjang belanja kosong.');
       return;
     }
+    // Validate variants before submit
+    const incomplete = items.find((item) => item.unitVariants.some((v) => v === null));
+    if (incomplete) {
+      setFormError('Pilih jenis bar (Gabin Bar / Crackers) untuk semua unit terlebih dahulu.');
+      return;
+    }
 
     startTransition(async () => {
       try {
@@ -104,16 +111,37 @@ export default function CheckoutPage() {
           created_at: createdAt,
         };
 
-        const orderItemsData = items.map((item) => ({
-          id: crypto.randomUUID(),
-          order_id: orderId,
-          product_id: item.product.id,
-          product_name: item.product.name,
-          price_snapshot: item.activePrice,
-          quantity: item.quantity,
-          subtotal: item.activePrice * item.quantity,
-          created_at: createdAt,
-        }));
+        const orderItemsData = items.flatMap((item) => {
+          const counts: Partial<Record<BarVariant, number>> = {};
+          item.unitVariants.forEach((v) => {
+            if (v) counts[v] = (counts[v] || 0) + 1;
+          });
+
+          const entries = Object.entries(counts) as [BarVariant, number][];
+          if (entries.length === 0) {
+            return [{
+              id: crypto.randomUUID(),
+              order_id: orderId,
+              product_id: item.product.id,
+              product_name: item.product.name,
+              price_snapshot: item.activePrice,
+              quantity: item.quantity,
+              subtotal: item.activePrice * item.quantity,
+              created_at: createdAt,
+            }];
+          }
+
+          return entries.map(([variant, qty]) => ({
+            id: crypto.randomUUID(),
+            order_id: orderId,
+            product_id: item.product.id,
+            product_name: `${item.product.name} (${BAR_VARIANT_LABELS[variant]})`,
+            price_snapshot: item.activePrice,
+            quantity: qty,
+            subtotal: item.activePrice * qty,
+            created_at: createdAt,
+          }));
+        });
 
         try {
           const fullOrder = { ...orderData, items: orderItemsData, order_items: orderItemsData };
@@ -196,19 +224,33 @@ export default function CheckoutPage() {
               {items.map((item) => (
                 <div
                   key={item.product.id}
-                  className="flex justify-between items-center text-sm py-1.5 border-b border-neutral-100 dark:border-neutral-800 last:border-0"
+                  className="py-2 border-b border-neutral-100 dark:border-neutral-800 last:border-0"
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-neutral-900 dark:text-white text-xs w-6 text-center py-0.5 rounded-md bg-slate-100 dark:bg-neutral-800">
-                      {item.quantity}x
-                    </span>
-                    <span className="text-neutral-800 dark:text-neutral-200 text-sm font-semibold">
-                      {item.product.name}
+                  <div className="flex justify-between items-center text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-neutral-900 dark:text-white text-xs w-6 text-center py-0.5 rounded-md bg-slate-100 dark:bg-neutral-800">
+                        {item.quantity}x
+                      </span>
+                      <span className="text-neutral-800 dark:text-neutral-200 text-sm font-semibold">
+                        {item.product.name}
+                      </span>
+                    </div>
+                    <span className="font-bold text-neutral-900 dark:text-white text-sm">
+                      {formatRupiah(item.activePrice * item.quantity)}
                     </span>
                   </div>
-                  <span className="font-bold text-neutral-900 dark:text-white text-sm">
-                    {formatRupiah(item.activePrice * item.quantity)}
-                  </span>
+                  {item.unitVariants.length > 0 && (
+                    <div className="pl-8 pt-1 flex flex-wrap gap-1 text-[11px] text-neutral-500 dark:text-neutral-400">
+                      {item.unitVariants.map((v, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-neutral-800 text-[10px] font-semibold text-neutral-600 dark:text-neutral-300"
+                        >
+                          U{idx + 1}: {v ? BAR_VARIANT_LABELS[v] : '-'}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

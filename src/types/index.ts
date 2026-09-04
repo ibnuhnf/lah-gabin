@@ -1,3 +1,10 @@
+export type BarVariant = 'GABIN_BAR' | 'CRACKERS';
+
+export const BAR_VARIANT_LABELS: Record<BarVariant, string> = {
+  GABIN_BAR: 'Gabin Bar',
+  CRACKERS: 'Crackers',
+};
+
 export interface Product {
   id: string;
   name: string;

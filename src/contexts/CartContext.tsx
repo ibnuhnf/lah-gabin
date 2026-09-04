@@ -1,13 +1,15 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { Product } from '@/types';
+import { Product, BarVariant } from '@/types';
 import { getActivePrice } from '@/lib/utils';
 
 export interface CartItem {
   product: Product;
   quantity: number;
   activePrice: number;
+  // null = belum dipilih untuk unit tersebut
+  unitVariants: (BarVariant | null)[];
 }
 
 interface CartContextValue {
@@ -15,9 +17,11 @@ interface CartContextValue {
   addItem: (product: Product, quantity?: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
+  setUnitVariant: (productId: string, unitIndex: number, variant: BarVariant) => void;
   clearCart: () => void;
   totalItems: number;
   subtotal: number;
+  allVariantsSelected: boolean;
 }
 
 const CartContext = createContext<CartContextValue>({
@@ -25,12 +29,14 @@ const CartContext = createContext<CartContextValue>({
   addItem: () => {},
   removeItem: () => {},
   updateQuantity: () => {},
+  setUnitVariant: () => {},
   clearCart: () => {},
   totalItems: 0,
   subtotal: 0,
+  allVariantsSelected: false,
 });
 
-const CART_STORAGE_KEY = 'lah_gabin_cart_v1';
+const CART_STORAGE_KEY = 'lah_gabin_cart_v2'; // bump version — v1 incompatible
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -65,13 +71,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
       if (existing) {
+        const newQty = existing.quantity + quantity;
+        // Extend unitVariants array with nulls for new units
+        const newVariants = [...existing.unitVariants, ...Array(quantity).fill(null)];
         return prev.map((item) =>
           item.product.id === product.id
-            ? { ...item, quantity: item.quantity + quantity, activePrice: price }
+            ? { ...item, quantity: newQty, activePrice: price, unitVariants: newVariants }
             : item
         );
       }
-      return [...prev, { product, quantity, activePrice: price }];
+      return [...prev, { product, quantity, activePrice: price, unitVariants: Array(quantity).fill(null) }];
     });
   };
 
@@ -85,9 +94,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
     setItems((prev) =>
-      prev.map((item) =>
-        item.product.id === productId ? { ...item, quantity } : item
-      )
+      prev.map((item) => {
+        if (item.product.id !== productId) return item;
+        // Trim or extend unitVariants to match new quantity
+        const variants = item.unitVariants.slice(0, quantity);
+        while (variants.length < quantity) variants.push(null);
+        return { ...item, quantity, unitVariants: variants };
+      })
+    );
+  };
+
+  const setUnitVariant = (productId: string, unitIndex: number, variant: BarVariant) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.product.id !== productId) return item;
+        const newVariants = [...item.unitVariants];
+        newVariants[unitIndex] = variant;
+        return { ...item, unitVariants: newVariants };
+      })
     );
   };
 
@@ -97,6 +121,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = items.reduce((sum, item) => sum + item.activePrice * item.quantity, 0);
+  const allVariantsSelected =
+    items.length > 0 && items.every((item) => item.unitVariants.every((v) => v !== null));
 
   return (
     <CartContext.Provider
@@ -105,9 +131,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
         addItem,
         removeItem,
         updateQuantity,
+        setUnitVariant,
         clearCart,
         totalItems,
         subtotal,
+        allVariantsSelected,
       }}
     >
       {children}
