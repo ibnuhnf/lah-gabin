@@ -3,6 +3,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Order } from '@/types';
+import { logoFull, logoMiddle, logoNavbar } from './logoBase64';
 
 interface InvoicePDFOptions {
   order: Order;
@@ -11,157 +12,186 @@ interface InvoicePDFOptions {
 }
 
 export function generateInvoicePDF(options: InvoicePDFOptions): jsPDF {
-  const { order, bankAccount, qrisNote } = options;
+  const { order } = options;
+
   const doc = new jsPDF({ unit: 'mm', format: 'a5', orientation: 'portrait' });
 
-  const pageW = doc.internal.pageSize.getWidth();
+  const pageW = doc.internal.pageSize.getWidth();  // 148mm
+  const pageH = doc.internal.pageSize.getHeight(); // 210mm
   const margin = 12;
   const contentW = pageW - margin * 2;
 
-  const brandBlue: [number, number, number] = [10, 37, 64];
-  const brandLight: [number, number, number] = [239, 246, 255];
-  const accentOrange: [number, number, number] = [249, 115, 22];
-  const gray500: [number, number, number] = [107, 114, 128];
+  // ── Background abu-abu muda ──────────────────────────────────────────────
+  doc.setFillColor(240, 240, 240);
+  doc.rect(0, 0, pageW, pageH, 'F');
 
-  doc.setFillColor(...brandBlue);
-  doc.rect(0, 0, pageW, 30, 'F');
+  const FONT = 'courier';
 
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(255, 255, 255);
-  doc.text('LAH GABIN', margin, 13);
+  // ── HEADER ───────────────────────────────────────────────────────────────
+  // Logo penuh kanan atas (LAH GABIN! + mascot)
+  // logoFull ~200px → fit 35mm wide di kanan atas
+  try {
+    doc.addImage(logoFull, 'PNG', pageW - margin - 35, 2, 35, 35);
+  } catch { /* skip jika gagal */ }
 
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(219, 234, 254);
-  doc.text('Es Gabin Aneka Rasa', margin, 19);
-  doc.text('WA: 0821-2149-8255', margin, 24);
+  // "INVOICE" besar kiri atas
+  doc.setFont(FONT, 'bold');
+  doc.setFontSize(32);
+  doc.setTextColor(20, 20, 20);
+  doc.text('INVOICE', margin, 20);
 
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(255, 255, 255);
-  doc.text('INVOICE', pageW - margin, 13, { align: 'right' });
-  doc.setFont('helvetica', 'normal');
-  doc.text(order.invoice_code, pageW - margin, 19, { align: 'right' });
+  // "LAH GABIN!" sub-header kiri
+  doc.setFontSize(16);
+  doc.setFont(FONT, 'bold');
+  doc.setTextColor(20, 20, 20);
+  doc.text('LAH GABIN!', margin, 29);
 
+  // Info order di kanan, di bawah logo
   const orderDate = new Date(order.created_at);
   const dateStr = orderDate.toLocaleDateString('id-ID', {
-    day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta',
+    day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Jakarta',
   });
-  const timeStr = orderDate.toLocaleTimeString('id-ID', {
-    hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta',
-  }) + ' WIB';
-  doc.text(`${dateStr}, ${timeStr}`, pageW - margin, 24, { align: 'right' });
 
-  let y = 36;
+  const rightX = pageW - margin;
+  doc.setFont(FONT, 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(30, 30, 30);
 
-  doc.setFillColor(...brandLight);
-  doc.rect(margin, y, contentW, 22, 'F');
+  const infoLines: [string, string][] = [
+    ['No. Order :', order.invoice_code],
+    ['Nama:', order.customer_name],
+    ['No.HP :', order.customer_wa],
+    ['Alamat:', order.customer_address ?? order.customer_notes ?? '-'],
+  ];
 
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...brandBlue);
-  doc.text('PEMESAN', margin + 3, y + 6);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(55, 65, 81);
-  doc.setFontSize(9);
-  doc.text(order.customer_name, margin + 3, y + 12);
-  doc.setFontSize(8);
-  doc.text(`WA: ${order.customer_wa}`, margin + 3, y + 18);
-
-  if (order.customer_notes) {
-    doc.setTextColor(...gray500);
-    const noteLines = doc.splitTextToSize(`Catatan: ${order.customer_notes}`, contentW / 2 - 6);
-    doc.text(noteLines, pageW / 2, y + 6);
+  let infoY = 40;
+  for (const [label, value] of infoLines) {
+    doc.text(`${label} ${value}`, rightX, infoY, { align: 'right' });
+    infoY += 5;
   }
 
-  y += 28;
+  // Date kiri
+  doc.setFont(FONT, 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(30, 30, 30);
+  doc.text(`Date: ${dateStr}`, margin, 37);
 
-  const tableRows = (order.items || []).map((item) => [
+  // ── Garis pemisah ────────────────────────────────────────────────────────
+  const ruleY = 65;
+  doc.setDrawColor(20, 20, 20);
+  doc.setLineWidth(0.5);
+  doc.line(margin, ruleY, pageW - margin, ruleY);
+
+  // ── TABEL PRODUK ─────────────────────────────────────────────────────────
+  const tableRows = (order.items || order.order_items || []).map((item) => [
     item.product_name,
-    item.quantity.toString(),
     `Rp ${item.price_snapshot.toLocaleString('id-ID')}`,
+    item.quantity.toString(),
     `Rp ${item.subtotal.toLocaleString('id-ID')}`,
   ]);
 
   autoTable(doc, {
-    startY: y,
-    head: [['Produk', 'Qty', 'Harga', 'Subtotal']],
+    startY: ruleY + 2,
+    head: [['PRODUCT', 'UNIT PRICE', 'QTY', 'TOTAL']],
     body: tableRows,
     margin: { left: margin, right: margin },
+    styles: {
+      font: 'courier',
+      fontSize: 8,
+      textColor: [20, 20, 20],
+      fillColor: [240, 240, 240],
+      lineWidth: 0,
+    },
     headStyles: {
-      fillColor: brandBlue,
-      textColor: [255, 255, 255],
+      font: 'courier',
       fontStyle: 'bold',
       fontSize: 8,
+      textColor: [20, 20, 20],
+      fillColor: [240, 240, 240],
+      lineWidth: 0,
     },
-    bodyStyles: { fontSize: 8, textColor: [55, 65, 81] },
-    alternateRowStyles: { fillColor: [249, 250, 251] },
+    alternateRowStyles: {
+      fillColor: [230, 230, 230],
+    },
     columnStyles: {
       0: { cellWidth: 'auto' },
-      1: { halign: 'center', cellWidth: 15 },
-      2: { halign: 'right', cellWidth: 30 },
+      1: { halign: 'left', cellWidth: 32 },
+      2: { halign: 'center', cellWidth: 12 },
       3: { halign: 'right', cellWidth: 30 },
     },
   });
 
-  const afterTable = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y + 30;
-  y = afterTable + 4;
+  const afterTable =
+    (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? ruleY + 40;
 
-  const totals: [string, string, boolean][] = [];
-  const subtotalAmt = order.total_amount;
-  totals.push([`Subtotal`, `Rp ${subtotalAmt.toLocaleString('id-ID')}`, false]);
+  // ── Garis pemisah sebelum footer ─────────────────────────────────────────
+  const rule2Y = afterTable + 4;
+  doc.setDrawColor(20, 20, 20);
+  doc.setLineWidth(0.4);
+  doc.line(margin, rule2Y, pageW / 2 + 10, rule2Y);
 
-  if (order.discount_amount > 0) {
-    totals.push([`Diskon / Voucher`, `- Rp ${order.discount_amount.toLocaleString('id-ID')}`, false]);
-  }
-  totals.push([`TOTAL`, `Rp ${order.final_amount.toLocaleString('id-ID')}`, true]);
+  // ── FOOTER KIRI: Payment Information ─────────────────────────────────────
+  let footerY = rule2Y + 6;
+  doc.setFont(FONT, 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(20, 20, 20);
+  doc.text('Payment Information:', margin, footerY);
 
-  for (const [label, value, isTotal] of totals) {
-    if (isTotal) {
-      doc.setFillColor(...accentOrange);
-      doc.rect(margin, y - 5, contentW, 10, 'F');
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(255, 255, 255);
-    } else {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(55, 65, 81);
-    }
-    doc.text(label, pageW - margin - 60, y, { align: 'left' });
-    doc.text(value, pageW - margin, y, { align: 'right' });
-    y += isTotal ? 8 : 6;
-  }
-
-  y += 4;
-
-  if (bankAccount || qrisNote) {
-    doc.setFillColor(255, 243, 199);
-    doc.rect(margin, y, contentW, bankAccount && qrisNote ? 22 : 14, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(146, 64, 14);
-    doc.text('CARA PEMBAYARAN', margin + 3, y + 6);
-    doc.setFont('helvetica', 'normal');
-    if (bankAccount) doc.text(bankAccount, margin + 3, y + 12);
-    if (qrisNote) doc.text(qrisNote, margin + 3, y + (bankAccount ? 18 : 12));
-    y += (bankAccount && qrisNote ? 22 : 14) + 4;
-  }
-
-  doc.setFillColor(239, 68, 68);
-  doc.rect(margin, y, contentW, 10, 'F');
-  doc.setFont('helvetica', 'bold');
+  footerY += 5;
+  doc.setFont(FONT, 'normal');
   doc.setFontSize(7.5);
-  doc.setTextColor(255, 255, 255);
-  doc.text('⚠ Pesanan BELUM FINAL sebelum dikonfirmasi admin via WhatsApp!', margin + 3, y + 6);
+  const payLines = doc.splitTextToSize(
+    'PEMBAYARAN DILAKUKAN DI WHATSAPP,\nTOLONG KIRIM INVOICE INI KE\nWHATSAPP ADMIN (KONFIRMASI)',
+    contentW / 2 + 5
+  );
+  doc.text(payLines, margin, footerY);
 
-  y += 14;
-  doc.setFont('helvetica', 'normal');
+  // ── FOOTER KANAN: Subtotal, Voucher, Total ───────────────────────────────
+  const totalsX = pageW - margin;
+  let totalsY = rule2Y + 6;
+
+  const subtotal = order.total_amount;
+  const voucher = order.discount_amount ?? 0;
+  const total = order.final_amount;
+
+  const totalsRows: [string, string, boolean][] = [
+    ['SUBTOTAL', `Rp ${subtotal.toLocaleString('id-ID')}`, false],
+    ['VOUCHER', voucher > 0 ? `- Rp ${voucher.toLocaleString('id-ID')}` : '0.00', false],
+    ['TOTAL', `Rp ${total.toLocaleString('id-ID')}`, true],
+  ];
+
+  for (const [label, value, isBold] of totalsRows) {
+    doc.setFont(FONT, isBold ? 'bold' : 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(20, 20, 20);
+    doc.text(`${label}  :  ${value}`, totalsX, totalsY, { align: 'right' });
+    totalsY += 5;
+  }
+
+  // ── BOTTOM: mascot kiri + logo kanan ─────────────────────────────────────
+  const bottomLogoY = pageH - 28;
+
+  // Mascot kiri bawah
+  try {
+    doc.addImage(logoMiddle, 'PNG', margin, bottomLogoY, 22, 22);
+  } catch { /* skip */ }
+
+  // Teks "LAH MAKASIH...." di sebelah mascot
+  doc.setFont(FONT, 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(20, 20, 20);
+  doc.text('LAH MAKASIH....', margin + 25, bottomLogoY + 14);
+
+  // Logo navbar kanan bawah (teks LAH GABIN!)
+  try {
+    doc.addImage(logoNavbar, 'PNG', pageW - margin - 40, bottomLogoY, 40, 22);
+  } catch { /* skip */ }
+
+  // Teks "GABIN BAR CIREBON" di bawah logo kanan
+  doc.setFont(FONT, 'normal');
   doc.setFontSize(7);
-  doc.setTextColor(...gray500);
-  doc.text('Terima kasih telah memesan Es Gabin! Lampirkan PDF ini ke WhatsApp admin.', margin, y, { align: 'left' });
+  doc.setTextColor(20, 20, 20);
+  doc.text('GABIN BAR CIREBON', pageW - margin, pageH - 4, { align: 'right' });
 
   return doc;
 }
