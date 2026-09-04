@@ -55,13 +55,14 @@ export async function generateInvoicePDF(options: InvoicePDFOptions): Promise<js
 
   const rightX = pageW - margin;
 
-  // Date: kiri, di bawah garis pemisah bg (~y=57mm)
+  // Date: kiri, di antara logo dan garis (logo ~y=38, garis ~y=52)
   doc.setFont(FONT, 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(30, 30, 30);
-  doc.text(`Date: ${dateStr}`, margin, 57);
+  doc.text(`Date: ${dateStr}`, margin, 48);
 
-  // Info order kanan, mulai y=55mm (di bawah garis pemisah bg)
+  // Info order kanan, mulai y=38mm (di bawah logo, di atas garis ~y=52)
+  // 4 baris × 3.5mm = 14mm total → berakhir di y=52 pas di garis
   doc.setFont(FONT, 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(30, 30, 30);
@@ -73,10 +74,10 @@ export async function generateInvoicePDF(options: InvoicePDFOptions): Promise<js
     ['Alamat:', order.customer_address ?? order.customer_notes ?? '-'],
   ];
 
-  let infoY = 55;
+  let infoY = 38;
   for (const [label, value] of infoLines) {
     doc.text(`${label} ${value}`, rightX, infoY, { align: 'right' });
-    infoY += 5;
+    infoY += 3.5;
   }
 
   // ── TABEL PRODUK — area kosong di bg, mulai ~y=72mm ──────────────────────
@@ -88,7 +89,7 @@ export async function generateInvoicePDF(options: InvoicePDFOptions): Promise<js
   ]);
 
   autoTable(doc, {
-    startY: 82,
+    startY: 68,
     head: [['PRODUCT', 'UNIT PRICE', 'QTY', 'TOTAL']],
     body: tableRows,
     margin: { left: margin, right: margin },
