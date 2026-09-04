@@ -29,58 +29,51 @@ export async function generateInvoicePDF(options: InvoicePDFOptions): Promise<js
   const pageW = doc.internal.pageSize.getWidth();  // 148mm
   const pageH = doc.internal.pageSize.getHeight(); // 210mm
 
-  // ── Background (sudah include semua logo & dekorasi) ─────────────────────
-  const bgData = await loadImageAsBase64('/bg-invoice.png');
+  // ── Background ────────────────────────────────────────────────────────────
+  // bg-invoice-fix.png layout (A5: 148×210mm):
+  //   Header  (INVOICE + logo)  : y = 0   – 38mm   ← JANGAN taruh teks
+  //   Konten kosong              : y = 38  – 162mm  ← semua teks di sini
+  //   Footer (mascot + teks)    : y = 162 – 210mm  ← JANGAN ganggu
+  const bgData = await loadImageAsBase64('/bg-invoice-fix.png');
   doc.addImage(bgData, 'PNG', 0, 0, pageW, pageH);
-
-  // ── Koordinat berdasarkan posisi elemen di bg-invoice.png ─────────────────
-  // bg image: 3375×4219 px, di-fit ke 148×210 mm
-  // skala: x = 148/3375 = 0.04385 mm/px, y = 210/4219 = 0.04977 mm/px
-  //
-  // Dari analisa visual bg:
-  //   Garis pemisah header ada di y ≈ 33% → 210 × 0.33 ≈ 69mm
-  //   Area konten kosong: y = 52mm s/d y = 155mm
-  //   Kanan atas info order: mulai y ≈ 40mm (di bawah logo)
-  //   Footer area mulai: y ≈ 155mm
 
   const FONT = 'courier';
   const margin = 12;
+  const rightX = pageW - margin;
 
-  // ── Info order: No Order, Nama, No.HP, Alamat — kanan atas di bawah logo ──
-  // Logo di bg ada di kanan atas, info order di bawahnya mulai ~y=42mm
+  // ── ZONA KONTEN: y=42mm s/d y=158mm ──────────────────────────────────────
+  const CONTENT_TOP = 42;   // mulai persis di bawah header bg
+  const CONTENT_BOTTOM = 158; // batas atas footer bg
+
+  // ── Info order — blok kiri + kanan di atas, tepat di bawah header ─────────
   const orderDate = new Date(order.created_at);
   const dateStr = orderDate.toLocaleDateString('id-ID', {
     day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Jakarta',
   });
 
-  const rightX = pageW - margin;
-
-  // Date: kiri, di antara logo dan garis (logo ~y=38, garis ~y=52)
   doc.setFont(FONT, 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(30, 30, 30);
-  doc.text(`Date: ${dateStr}`, margin, 48);
+  doc.setFontSize(8);
+  doc.setTextColor(40, 40, 40);
 
-  // Info order kanan, mulai y=38mm (di bawah logo, di atas garis ~y=52)
-  // 4 baris × 3.5mm = 14mm total → berakhir di y=52 pas di garis
-  doc.setFont(FONT, 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(30, 30, 30);
+  // Kiri: Date + No. Order
+  doc.text(`Date     : ${dateStr}`, margin, CONTENT_TOP);
+  doc.text(`No. Order: ${order.invoice_code}`, margin, CONTENT_TOP + 5);
 
-  const infoLines: [string, string][] = [
-    ['No. Order :', order.invoice_code],
-    ['Nama:', order.customer_name],
-    ['No.HP :', order.customer_wa],
-    ['Alamat:', order.customer_address ?? order.customer_notes ?? '-'],
-  ];
+  // Kanan: Nama, No.HP, Alamat
+  doc.text(`Nama   : ${order.customer_name}`, rightX, CONTENT_TOP, { align: 'right' });
+  doc.text(`No.HP  : ${order.customer_wa}`, rightX, CONTENT_TOP + 5, { align: 'right' });
 
-  let infoY = 38;
-  for (const [label, value] of infoLines) {
-    doc.text(`${label} ${value}`, rightX, infoY, { align: 'right' });
-    infoY += 3.5;
-  }
+  const alamat = order.customer_address ?? order.customer_notes ?? '-';
+  const alamatLines = doc.splitTextToSize(`Alamat : ${alamat}`, 70);
+  doc.text(alamatLines, rightX, CONTENT_TOP + 10, { align: 'right' });
 
-  // ── TABEL PRODUK — area kosong di bg, mulai ~y=72mm ──────────────────────
+  // Garis tipis pemisah info vs tabel
+  const dividerY = CONTENT_TOP + 10 + (alamatLines.length * 4) + 3;
+  doc.setDrawColor(150, 150, 150);
+  doc.setLineWidth(0.2);
+  doc.line(margin, dividerY, pageW - margin, dividerY);
+
+  // ── TABEL PRODUK ──────────────────────────────────────────────────────────
   const tableRows = (order.items || order.order_items || []).map((item) => [
     item.product_name,
     `Rp ${item.price_snapshot.toLocaleString('id-ID')}`,
@@ -88,12 +81,13 @@ export async function generateInvoicePDF(options: InvoicePDFOptions): Promise<js
     `Rp ${item.subtotal.toLocaleString('id-ID')}`,
   ]);
 
+  const tableStartY = dividerY + 3;
+
   autoTable(doc, {
-    startY: 68,
+    startY: tableStartY,
     head: [['PRODUCT', 'UNIT PRICE', 'QTY', 'TOTAL']],
     body: tableRows,
     margin: { left: margin, right: margin },
-    // Semua transparan — tidak ada fill agar bg terlihat
     styles: {
       font: 'courier',
       fontSize: 8,
@@ -111,7 +105,6 @@ export async function generateInvoicePDF(options: InvoicePDFOptions): Promise<js
       lineWidth: 0,
     },
     alternateRowStyles: {
-      // Sedikit gelap untuk baris ganjil agar terbaca tapi tidak ganggu bg
       fillColor: [210, 215, 225] as [number, number, number],
     },
     columnStyles: {
@@ -120,59 +113,52 @@ export async function generateInvoicePDF(options: InvoicePDFOptions): Promise<js
       2: { halign: 'center', cellWidth: 12 },
       3: { halign: 'right', cellWidth: 30 },
     },
-    // Batas bawah tabel: jangan sampai ke area footer bg (~y=155mm)
     pageBreak: 'avoid',
   });
 
   const afterTable =
-    (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 110;
+    (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? tableStartY + 30;
 
-  // ── SUBTOTAL / VOUCHER / TOTAL — rata kanan, di bawah tabel ──────────────
-  // Pastikan tidak melebihi y=150mm (batas atas footer bg)
-  const summaryStartY = Math.min(afterTable + 6, 140);
+  // ── SUBTOTAL / VOUCHER / TOTAL — di bawah tabel, di atas footer bg ────────
+  const summaryStartY = Math.min(afterTable + 5, CONTENT_BOTTOM - 25);
 
   const subtotal = order.total_amount;
   const voucher = order.discount_amount ?? 0;
   const total = order.final_amount;
 
-  const totalsRows: [string, string, boolean][] = [
-    ['SUBTOTAL', `Rp ${subtotal.toLocaleString('id-ID')}`, false],
-    ['VOUCHER', voucher > 0 ? `- Rp ${voucher.toLocaleString('id-ID')}` : 'Rp 0', false],
-    ['TOTAL', `Rp ${total.toLocaleString('id-ID')}`, true],
-  ];
+  // Garis tipis sebelum summary
+  doc.setDrawColor(150, 150, 150);
+  doc.setLineWidth(0.2);
+  doc.line(margin, summaryStartY - 2, pageW - margin, summaryStartY - 2);
 
-  // Garis pemisah tipis sebelum summary — hanya setengah lebar kanan
-  doc.setDrawColor(80, 80, 80);
-  doc.setLineWidth(0.3);
-  doc.line(pageW / 2, summaryStartY - 3, pageW - margin, summaryStartY - 3);
-
-  let summaryY = summaryStartY;
-  for (const [label, value, isBold] of totalsRows) {
-    doc.setFont(FONT, isBold ? 'bold' : 'normal');
-    doc.setFontSize(isBold ? 9 : 8);
-    doc.setTextColor(20, 20, 20);
-    // Label kiri dari tengah halaman, value rata kanan
-    doc.text(label, pageW / 2 + 2, summaryY);
-    doc.text(value, rightX, summaryY, { align: 'right' });
-    summaryY += isBold ? 6 : 5;
-  }
-
-  // ── Payment info — kiri bawah, di atas area footer bg (~y=155mm) ──────────
-  // Footer bg mulai ~y=155mm, letakkan payment info mulai ~y=148mm ke atas
-  const payY = Math.min(summaryStartY, 140);
-
+  // Kiri: Payment info
   doc.setFont(FONT, 'bold');
   doc.setFontSize(7.5);
   doc.setTextColor(20, 20, 20);
-  doc.text('Payment Information:', margin, payY);
-
+  doc.text('Payment Information:', margin, summaryStartY + 3);
   doc.setFont(FONT, 'normal');
   doc.setFontSize(7);
   const payLines = doc.splitTextToSize(
     'Pembayaran via WhatsApp.\nKirim invoice ini ke WhatsApp admin untuk konfirmasi.',
     pageW / 2 - margin - 2
   );
-  doc.text(payLines, margin, payY + 5);
+  doc.text(payLines, margin, summaryStartY + 8);
+
+  // Kanan: totals
+  const totalsRows: [string, string, boolean][] = [
+    ['SUBTOTAL', `Rp ${subtotal.toLocaleString('id-ID')}`, false],
+    ['VOUCHER ', voucher > 0 ? `- Rp ${voucher.toLocaleString('id-ID')}` : 'Rp 0', false],
+    ['TOTAL   ', `Rp ${total.toLocaleString('id-ID')}`, true],
+  ];
+
+  let summaryY = summaryStartY + 3;
+  for (const [label, value, isBold] of totalsRows) {
+    doc.setFont(FONT, isBold ? 'bold' : 'normal');
+    doc.setFontSize(isBold ? 9 : 8);
+    doc.setTextColor(20, 20, 20);
+    doc.text(`${label}: ${value}`, rightX, summaryY, { align: 'right' });
+    summaryY += isBold ? 6 : 5;
+  }
 
   return doc;
 }
