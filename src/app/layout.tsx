@@ -44,7 +44,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" className={`${poppins.variable} ${inter.variable}`} suppressHydrationWarning>
-      <body className="min-h-screen font-sans bg-slate-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 antialiased transition-colors selection:bg-blue-600 selection:text-white">
+      <body className={`min-h-screen ${poppins.className} font-sans bg-slate-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 antialiased transition-colors selection:bg-blue-600 selection:text-white`}>
         <ThemeProvider>
           <StoreProvider>
             <CartProvider>{children}</CartProvider>
