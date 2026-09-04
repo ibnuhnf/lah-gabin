@@ -175,6 +175,9 @@ export default function HomePage() {
             .order('name');
           if (!error && data && data.length > 0) {
             setProducts(data);
+            try {
+              localStorage.setItem('lah_gabin_admin_products', JSON.stringify(data));
+            } catch {}
           }
         } catch {}
       }

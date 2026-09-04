@@ -60,6 +60,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           try {
             localStorage.setItem('lah_gabin_store_open', String(data.is_open));
           } catch {}
+        } else if (!data) {
+          // If no row exists yet in Supabase, create initial row
+          await supabase.from('store_config').upsert({
+            id: '00000000-0000-0000-0000-000000000001',
+            is_open: true,
+            wa_number: '6282121498255',
+          });
         }
       } catch (err) {
         console.warn('Store config fetch fallback:', err);
@@ -77,16 +84,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       window.dispatchEvent(new Event('lah_gabin_store_changed'));
     } catch {}
 
-    // Persist to Supabase
+    // Persist to Supabase with upsert
     if (isSupabaseConfigured()) {
       try {
+        const targetId = config?.id && config.id !== 'default' 
+          ? config.id 
+          : '00000000-0000-0000-0000-000000000001';
+
         const { error } = await supabase
           .from('store_config')
-          .update({ is_open: isOpen, updated_at: new Date().toISOString() })
-          .neq('id', '00000000-0000-0000-0000-000000000000'); // update any existing row
+          .upsert({
+            id: targetId,
+            is_open: isOpen,
+            wa_number: config?.wa_number || '6282121498255',
+            updated_at: new Date().toISOString(),
+          });
 
         if (error) {
-          console.warn('Failed to update Supabase store_config, using local state:', error);
+          console.warn('Failed to upsert Supabase store_config:', error);
         }
       } catch (err) {
         console.warn('Network error updating store status:', err);

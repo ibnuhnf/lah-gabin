@@ -144,9 +144,10 @@ export default function AdminProductsPage() {
         saveProductsState(newList);
 
         if (isSupabaseConfigured()) {
-          await supabase
+          const { error } = await supabase
             .from('products')
-            .update({
+            .upsert({
+              id: updated.id,
               name: updated.name,
               description: updated.description,
               base_price: updated.base_price,
@@ -155,8 +156,10 @@ export default function AdminProductsPage() {
               status: updated.status,
               image_urls: updated.image_urls,
               updated_at: updated.updated_at,
-            })
-            .eq('id', editProduct.id);
+            });
+          if (error) {
+            console.warn('Supabase product upsert error:', error);
+          }
         }
         setMessage('Produk berhasil diperbarui!');
       } else {
@@ -183,7 +186,10 @@ export default function AdminProductsPage() {
         saveProductsState(newList);
 
         if (isSupabaseConfigured()) {
-          await supabase.from('products').insert([newProd]);
+          const { error } = await supabase.from('products').upsert([newProd]);
+          if (error) {
+            console.warn('Supabase product insert error:', error);
+          }
         }
         setMessage('Produk baru berhasil ditambahkan!');
       }
