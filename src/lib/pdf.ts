@@ -55,13 +55,13 @@ export async function generateInvoicePDF(options: InvoicePDFOptions): Promise<js
 
   const rightX = pageW - margin;
 
-  // Date: kiri, di bawah "LAH GABIN!" teks bg (~y=38mm)
+  // Date: kiri, di bawah garis pemisah bg (~y=57mm)
   doc.setFont(FONT, 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(30, 30, 30);
-  doc.text(`Date: ${dateStr}`, margin, 44);
+  doc.text(`Date: ${dateStr}`, margin, 57);
 
-  // Info order kanan, mulai y=40mm
+  // Info order kanan, mulai y=55mm (di bawah garis pemisah bg)
   doc.setFont(FONT, 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(30, 30, 30);
@@ -73,7 +73,7 @@ export async function generateInvoicePDF(options: InvoicePDFOptions): Promise<js
     ['Alamat:', order.customer_address ?? order.customer_notes ?? '-'],
   ];
 
-  let infoY = 40;
+  let infoY = 55;
   for (const [label, value] of infoLines) {
     doc.text(`${label} ${value}`, rightX, infoY, { align: 'right' });
     infoY += 5;
@@ -88,7 +88,7 @@ export async function generateInvoicePDF(options: InvoicePDFOptions): Promise<js
   ]);
 
   autoTable(doc, {
-    startY: 72,
+    startY: 82,
     head: [['PRODUCT', 'UNIT PRICE', 'QTY', 'TOTAL']],
     body: tableRows,
     margin: { left: margin, right: margin },
