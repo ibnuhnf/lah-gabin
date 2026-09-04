@@ -47,7 +47,6 @@ const NAV_GROUPS = [
     items: [
       { href: '/admin/produk', label: 'Produk & Foto', icon: Package },
       { href: '/admin/voucher', label: 'Voucher Diskon', icon: Tag },
-      { href: '/admin/bahan-baku', label: 'Bahan Baku', icon: FlaskConical },
       { href: '/admin/stok', label: 'Mutasi Stok', icon: Boxes },
     ],
   },

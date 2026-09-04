@@ -20,7 +20,6 @@ import type { Order, Product } from '@/types';
 const INITIAL_CRITICAL_STOCK = [
   { name: 'Es Gabin Tiramisu', stock: 0, min: 5, unit: 'pcs' },
   { name: 'Es Gabin Oreo', stock: 0, min: 5, unit: 'pcs' },
-  { name: 'Keju', stock: 200, min: 500, unit: 'gram' },
 ];
 
 const STAT_COLORS = {
