@@ -12,6 +12,10 @@ import {
   CheckCircle2,
   PackageCheck,
   Zap,
+  ChefHat,
+  Flame,
+  Package,
+  Award,
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { formatRupiah } from '@/lib/utils';
@@ -144,6 +148,35 @@ export default function AdminDashboardPage() {
     .sort((a, b) => b.qty - a.qty);
   const totalAllPcsSold = totalTerjualList.reduce((acc, curr) => acc + curr.qty, 0);
 
+  // Kebutuhan produksi gabin dari antrean aktif (PENDING_APPROVAL, DITERIMA_PROSES, DIPROSES)
+  const productionMap: Record<string, number> = {};
+  activeQueue.forEach((ord) => {
+    const itms = ord.items || ord.order_items || [];
+    itms.forEach((it) => {
+      const name = it.product_name;
+      productionMap[name] = (productionMap[name] || 0) + (it.quantity || 0);
+    });
+  });
+
+  const productionTable = Object.entries(productionMap)
+    .map(([name, orderedQty]) => {
+      const prod = products.find((p) => p.name.toLowerCase().trim() === name.toLowerCase().trim());
+      const currentStock = prod ? prod.stock_quantity : 0;
+      // Wajib dibuat = selisih bila stok ready tidak mencukupi antrean
+      const needToProduce = Math.max(0, orderedQty - currentStock);
+      return {
+        name,
+        orderedQty,
+        currentStock,
+        needToProduce,
+        unit: prod?.unit || 'pcs',
+      };
+    })
+    .sort((a, b) => b.needToProduce - a.needToProduce || b.orderedQty - a.orderedQty);
+
+  const totalMustProduce = productionTable.reduce((acc, curr) => acc + curr.needToProduce, 0);
+  const totalInQueue = productionTable.reduce((acc, curr) => acc + curr.orderedQty, 0);
+
   const criticalStockList =
     products.length > 0
       ? products
@@ -226,8 +259,8 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* 4 KPI Cards (Bankzai style) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 5 KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
         <KPICard
           title="Pemasukan"
           icon={<DollarSign size={18} />}
@@ -236,6 +269,15 @@ export default function AdminDashboardPage() {
           trendText={`${totalTransactions} transaksi lunas`}
           color="blue"
           trendIcon={<ArrowUpRight size={13} />}
+        />
+        <KPICard
+          title="Gabin Terjual"
+          icon={<PackageCheck size={18} />}
+          value={`${totalAllPcsSold} pcs`}
+          trend={totalAllPcsSold > 0 ? "up" : "down"}
+          trendText={`${totalTerjualList.length} varian laku`}
+          color="emerald"
+          trendIcon={<Flame size={13} />}
         />
         <KPICard
           title="Pengeluaran"
@@ -260,17 +302,231 @@ export default function AdminDashboardPage() {
           icon={<DollarSign size={18} />}
           value={formatRupiah(saldoKas)}
           trend={saldoKas >= 0 ? "up" : "down"}
-          trendText="Saldo tersedia sekarang"
+          trendText="Saldo kas tersedia"
           color="emerald"
           trendIcon={<Zap size={13} />}
         />
       </div>
 
-      {/* Outcome Categories + Overview Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Tabel Rencana & Kebutuhan Produksi Gabin (Yang Harus Dibuat) */}
+      <div className="bankzai-card p-5 border-amber-500/20 bg-gradient-to-b from-amber-500/[0.02] to-transparent">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                <ChefHat size={18} />
+              </div>
+              <div>
+                <h2 className="font-heading font-bold text-base text-neutral-900 dark:text-white flex items-center gap-2">
+                  Daftar Gabin yang Harus Dibuat (Dapur)
+                </h2>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Dihitung otomatis dari {activeQueue.length} antrean pesanan aktif vs sisa stok ready
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/[0.06] text-neutral-700 dark:text-neutral-300">
+              Total Dipesan: <strong className="text-neutral-900 dark:text-white">{totalInQueue} pcs</strong>
+            </span>
+            <span className={`text-xs font-bold px-3 py-1.5 rounded-xl ${
+              totalMustProduce > 0
+                ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+            }`}>
+              Wajib Dibuat: <strong className="underline">{totalMustProduce} pcs</strong>
+            </span>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto -mx-2">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left border-b border-slate-200/70 dark:border-white/[0.06]">
+                <th className="px-3 pb-3 text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                  Varian Gabin
+                </th>
+                <th className="px-3 pb-3 text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 text-center">
+                  Total Dipesan
+                </th>
+                <th className="px-3 pb-3 text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 text-center">
+                  Stok Ready
+                </th>
+                <th className="px-3 pb-3 text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 text-center">
+                  Harus Dibuat (Kekurangan)
+                </th>
+                <th className="px-3 pb-3 text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 text-right">
+                  Status Dapur
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {productionTable.length > 0 ? (
+                productionTable.map((item) => {
+                  const isDeficit = item.needToProduce > 0;
+                  return (
+                    <tr
+                      key={item.name}
+                      className="border-b border-slate-100/70 dark:border-white/[0.04] last:border-0 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors"
+                    >
+                      <td className="px-3 py-3">
+                        <p className="font-bold text-xs text-neutral-900 dark:text-white flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                          {item.name}
+                        </p>
+                      </td>
+                      <td className="px-3 py-3 text-center font-bold text-xs text-neutral-800 dark:text-neutral-200 tabular-nums">
+                        {item.orderedQty} {item.unit}
+                      </td>
+                      <td className="px-3 py-3 text-center text-xs tabular-nums">
+                        <span className={`font-semibold ${item.currentStock === 0 ? 'text-rose-500' : 'text-neutral-600 dark:text-neutral-400'}`}>
+                          {item.currentStock} {item.unit}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-center tabular-nums">
+                        <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-extrabold ${
+                          isDeficit
+                            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        }`}>
+                          {item.needToProduce} {item.unit}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        {isDeficit ? (
+                          <span className="bankzai-badge bankzai-badge-pending text-[10px]">
+                            ⚠️ Goreng {item.needToProduce} {item.unit}
+                          </span>
+                        ) : (
+                          <span className="bankzai-badge bankzai-badge-completed text-[10px]">
+                            ✓ Stok Cukup
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={5} className="text-center py-6 text-xs text-neutral-400 font-medium">
+                    Tidak ada antrean pesanan aktif saat ini. Dapur dalam kondisi standby.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Menu-Menu yang Laku + Distribusi & Overview */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Menu yang Laku (Best Sellers) */}
+        <div className="bankzai-card p-5 lg:col-span-2">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <Award size={18} />
+              </div>
+              <div>
+                <h2 className="font-heading font-bold text-base text-neutral-900 dark:text-white">
+                  Menu-Menu yang Laku (Terlaris)
+                </h2>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Peringkat penjualan berdasarkan total pesanan selesai
+                </p>
+              </div>
+            </div>
+            <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              {totalAllPcsSold} pcs total terjual
+            </span>
+          </div>
+
+          <div className="overflow-x-auto -mx-2">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left border-b border-slate-200/70 dark:border-white/[0.06]">
+                  <th className="px-3 pb-3 text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 text-center w-10">
+                    #
+                  </th>
+                  <th className="px-3 pb-3 text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                    Menu Varian
+                  </th>
+                  <th className="px-3 pb-3 text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 text-center">
+                    Terjual (pcs)
+                  </th>
+                  <th className="px-3 pb-3 text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                    Pangsa Penjualan
+                  </th>
+                  <th className="px-3 pb-3 text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 text-right">
+                    Total Omzet
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {totalTerjualList.length > 0 ? (
+                  totalTerjualList.map((item, idx) => {
+                    const pct = totalAllPcsSold > 0 ? Math.round((item.qty / totalAllPcsSold) * 100) : 0;
+                    return (
+                      <tr
+                        key={item.name}
+                        className="border-b border-slate-100/70 dark:border-white/[0.04] last:border-0 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors"
+                      >
+                        <td className="px-3 py-3 text-center">
+                          <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-extrabold ${
+                            idx === 0
+                              ? 'bg-amber-500 text-white'
+                              : idx === 1
+                              ? 'bg-slate-300 dark:bg-neutral-600 text-neutral-900 dark:text-white'
+                              : idx === 2
+                              ? 'bg-amber-700 text-white'
+                              : 'text-neutral-400 font-medium'
+                          }`}>
+                            {idx + 1}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3">
+                          <p className="font-bold text-xs text-neutral-900 dark:text-white">
+                            {item.name}
+                          </p>
+                        </td>
+                        <td className="px-3 py-3 text-center font-heading font-extrabold text-xs text-neutral-900 dark:text-white tabular-nums">
+                          {item.qty} pcs
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="w-full max-w-[140px]">
+                            <div className="flex justify-between text-[10px] font-semibold text-neutral-500 mb-1">
+                              <span>{pct}%</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-slate-100 dark:bg-white/[0.06] rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-emerald-500 rounded-full transition-all"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 text-right font-heading font-extrabold text-xs text-neutral-900 dark:text-white tabular-nums">
+                          {formatRupiah(item.omzet)}
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="text-center py-6 text-xs text-neutral-400 font-medium">
+                      Belum ada data penjualan tercatat.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         {/* Outcome Categories Donut */}
         <div className="bankzai-card p-5">
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="font-heading font-bold text-base text-neutral-900 dark:text-white">
               Distribusi Penjualan
             </h2>
@@ -279,13 +535,13 @@ export default function AdminDashboardPage() {
             </span>
           </div>
 
-          <div className="grid grid-cols-5 gap-4 items-center">
+          <div className="flex flex-col items-center justify-center gap-4">
             {/* Donut SVG */}
-            <div className="col-span-2 flex items-center justify-center">
+            <div className="flex items-center justify-center">
               <DonutChart segments={outcomeCategories} others={othersPct} />
             </div>
             {/* Legend */}
-            <div className="col-span-3 space-y-2">
+            <div className="w-full space-y-2">
               {outcomeCategories.map((cat, i) => {
                 const colors = ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6'];
                 return (
@@ -308,7 +564,10 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         </div>
+      </div>
 
+      {/* Outcome Categories + Overview Chart */}
+      <div className="grid grid-cols-1 gap-6">
         {/* Weekly Overview Chart */}
         <div className="bankzai-card p-5">
           <div className="flex items-center justify-between mb-5">
