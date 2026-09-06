@@ -1,102 +1,533 @@
 'use client';
 
-import { useState } from 'react';
-import { BarChart3, Download, TrendingUp, DollarSign, Receipt } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import {
+  BarChart3,
+  Download,
+  TrendingUp,
+  DollarSign,
+  Receipt,
+  Printer,
+  Calendar,
+  Layers,
+  ArrowUpRight,
+  TrendingDown,
+  PieChart,
+  ShoppingBag,
+  Store,
+} from 'lucide-react';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { formatRupiah } from '@/lib/utils';
+import { Order, Product } from '@/types';
+import { ExpenseItem } from '../pengeluaran/page';
+
+const INITIAL_EXPENSES: ExpenseItem[] = [
+  { id: '1', date: '2026-09-01', category: 'Bahan Baku', amount: 350000, description: 'Beli biskuit gabin, susu, keju (mingguan)' },
+  { id: '2', date: '2026-09-01', category: 'Kemasan / Packaging', amount: 85000, description: 'Plastik klip 500 pcs + stiker label' },
+  { id: '3', date: '2026-08-30', category: 'Operasional (Gas / Listrik / Air)', amount: 250000, description: 'Token listrik freezer + isi gas' },
+  { id: '4', date: '2026-08-29', category: 'Transportasi / Logistik', amount: 45000, description: 'Ongkir kirim bahan baku' },
+  { id: '5', date: '2026-08-25', category: 'Marketing / Iklan', amount: 100000, description: 'Boost IG story promo opening 7 hari' },
+];
 
 export default function AdminReportsPage() {
-  const [month, setMonth] = useState('2026-09');
+  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7)); // YYYY-MM
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
 
-  const reportData = {
-    omzet_total: 0,
-    hpp_total: 0,
-    laba_kotor: 0,
-    biaya_operasional: 0,
-    laba_bersih: 0,
-    total_unit_terjual: 0,
-    channel_breakdown: [
-      { name: 'Online (Web & WA)', omzet: 0, unit: 0 },
-      { name: 'POS / Kasir Langsung', omzet: 0, unit: 0 },
-    ],
+  // Load all synchronized data on mount
+  useEffect(() => {
+    // 1. LocalStorage initial load
+    try {
+      const savedOrders = localStorage.getItem('lah_gabin_admin_orders');
+      if (savedOrders) setOrders(JSON.parse(savedOrders));
+    } catch {}
+
+    try {
+      const savedExpenses = localStorage.getItem('lah_gabin_admin_expenses');
+      if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
+      else setExpenses(INITIAL_EXPENSES);
+    } catch {}
+
+    try {
+      const savedProducts = localStorage.getItem('lah_gabin_admin_products');
+      if (savedProducts) setProducts(JSON.parse(savedProducts));
+    } catch {}
+
+    // 2. Supabase remote fetch
+    async function loadData() {
+      if (isSupabaseConfigured()) {
+        try {
+          const { data: dbOrders } = await supabase
+            .from('orders')
+            .select('*, order_items(*)')
+            .order('created_at', { ascending: false });
+          if (dbOrders && dbOrders.length > 0) {
+            const formatted = dbOrders.map((o) => ({
+              ...o,
+              items: o.order_items || o.items || [],
+            }));
+            setOrders(formatted);
+          }
+
+          const { data: dbExpenses } = await supabase
+            .from('expenses')
+            .select('*')
+            .order('expense_date', { ascending: false });
+          if (dbExpenses && dbExpenses.length > 0) {
+            const mapped: ExpenseItem[] = dbExpenses.map((d: Record<string, unknown>) => ({
+              id: String(d.id),
+              date: String(d.expense_date || d.created_at || '').slice(0, 10),
+              category: String(d.category || 'Operasional'),
+              amount: Number(d.amount) || 0,
+              description: String(d.description || '-'),
+            }));
+            setExpenses(mapped);
+          }
+
+          const { data: dbProducts } = await supabase.from('products').select('*');
+          if (dbProducts && dbProducts.length > 0) {
+            setProducts(dbProducts);
+          }
+        } catch (err) {
+          console.warn('Laporan sync fallback to local:', err);
+        }
+      }
+    }
+
+    loadData();
+
+    // 3. Storage event listener for realtime updates across tabs
+    function syncStorage(e: StorageEvent) {
+      if (e.key === 'lah_gabin_admin_orders' && e.newValue) {
+        try {
+          setOrders(JSON.parse(e.newValue));
+        } catch {}
+      }
+      if (e.key === 'lah_gabin_admin_expenses' && e.newValue) {
+        try {
+          setExpenses(JSON.parse(e.newValue));
+        } catch {}
+      }
+      if (e.key === 'lah_gabin_admin_products' && e.newValue) {
+        try {
+          setProducts(JSON.parse(e.newValue));
+        } catch {}
+      }
+    }
+
+    window.addEventListener('storage', syncStorage);
+    return () => window.removeEventListener('storage', syncStorage);
+  }, []);
+
+  // Filter orders by month & completed status (or all active paid transactions)
+  const monthOrders = useMemo(() => {
+    return orders.filter((o) => {
+      const orderMonth = (o.created_at || '').slice(0, 7);
+      const isCompleted = o.status === 'SELESAI';
+      return (!month || orderMonth === month) && isCompleted;
+    });
+  }, [orders, month]);
+
+  // Filter expenses by selected month
+  const monthExpenses = useMemo(() => {
+    return expenses.filter((e) => {
+      const expenseMonth = (e.date || '').slice(0, 7);
+      return !month || expenseMonth === month;
+    });
+  }, [expenses, month]);
+
+  // Financial Calculations
+  const calculations = useMemo(() => {
+    const omzet_total = monthOrders.reduce((acc, o) => acc + (Number(o.final_amount) || 0), 0);
+    const total_transaksi = monthOrders.length;
+
+    // Hitung total unit dan total HPP
+    let total_unit_terjual = 0;
+    let hpp_total = 0;
+
+    // Helper map product id/name to hpp
+    const hppMap: Record<string, number> = {};
+    products.forEach((p) => {
+      hppMap[p.id] = Number(p.hpp_per_pcs) || 3000;
+      hppMap[p.name.toLowerCase().trim()] = Number(p.hpp_per_pcs) || 3000;
+    });
+
+    const stripBarSuffix = (s: string) => s.replace(/\s*\([^)]*\)\s*$/, '').trim();
+
+    monthOrders.forEach((o) => {
+      const items = o.items || o.order_items || [];
+      items.forEach((it) => {
+        const qty = Number(it.quantity) || 0;
+        total_unit_terjual += qty;
+
+        const baseName = stripBarSuffix(it.product_name || '').toLowerCase();
+        const unitHpp = hppMap[it.product_id] || hppMap[baseName] || 3000; // default 3k jika belum diset
+        hpp_total += unitHpp * qty;
+      });
+    });
+
+    const laba_kotor = omzet_total - hpp_total;
+    const biaya_operasional = monthExpenses.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
+    const laba_bersih = laba_kotor - biaya_operasional;
+
+    const margin_kotor_pct = omzet_total > 0 ? (laba_kotor / omzet_total) * 100 : 0;
+    const margin_bersih_pct = omzet_total > 0 ? (laba_bersih / omzet_total) * 100 : 0;
+
+    // Breakdown Channel
+    const onlineOrders = monthOrders.filter((o) => o.order_source === 'ONLINE');
+    const posOrders = monthOrders.filter((o) => o.order_source === 'POS');
+
+    const onlineOmzet = onlineOrders.reduce((s, o) => s + (Number(o.final_amount) || 0), 0);
+    const posOmzet = posOrders.reduce((s, o) => s + (Number(o.final_amount) || 0), 0);
+
+    const onlineUnits = onlineOrders.reduce(
+      (s, o) => s + (o.items || o.order_items || []).reduce((iq, it) => iq + (Number(it.quantity) || 0), 0),
+      0
+    );
+    const posUnits = posOrders.reduce(
+      (s, o) => s + (o.items || o.order_items || []).reduce((iq, it) => iq + (Number(it.quantity) || 0), 0),
+      0
+    );
+
+    // Breakdown Expense by Category
+    const expenseByCategory: Record<string, number> = {};
+    monthExpenses.forEach((e) => {
+      expenseByCategory[e.category] = (expenseByCategory[e.category] || 0) + e.amount;
+    });
+
+    return {
+      omzet_total,
+      total_transaksi,
+      total_unit_terjual,
+      hpp_total,
+      laba_kotor,
+      biaya_operasional,
+      laba_bersih,
+      margin_kotor_pct,
+      margin_bersih_pct,
+      channel_breakdown: [
+        {
+          name: 'Online (Web & WhatsApp)',
+          omzet: onlineOmzet,
+          transactions: onlineOrders.length,
+          unit: onlineUnits,
+          icon: <ShoppingBag size={18} className="text-blue-500" />,
+        },
+        {
+          name: 'POS / Kasir Langsung (Outlet)',
+          omzet: posOmzet,
+          transactions: posOrders.length,
+          unit: posUnits,
+          icon: <Store size={18} className="text-emerald-500" />,
+        },
+      ],
+      expense_breakdown: Object.entries(expenseByCategory).sort((a, b) => b[1] - a[1]),
+    };
+  }, [monthOrders, monthExpenses, products]);
+
+  const handlePrint = () => {
+    window.print();
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-6 print:m-0 print:p-0">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
         <div>
           <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-neutral-900 dark:text-white tracking-tight flex items-center gap-2.5">
-            <BarChart3 size={24} className="text-accent-500" /> Laporan Keuangan & Laba Rugi
+            <BarChart3 size={26} className="text-emerald-500" /> Laporan Keuangan & Laba Rugi
           </h1>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">Analisis omzet, HPP, margin laba, dan profitabilitas usaha.</p>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 font-medium">
+            Analisis omzet, HPP, beban operasional, dan laba bersih usaha secara realtime.
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <input
-            type="month"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            className="input-field py-2 text-xs w-auto"
-          />
-          <button className="btn-secondary text-xs py-2 px-3 flex items-center gap-1.5">
-            <Download size={14} /> Ekspor PDF
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-white/[0.04] px-3 py-2 rounded-xl border border-slate-200/60 dark:border-white/[0.06]">
+            <Calendar size={14} className="text-neutral-400" />
+            <input
+              type="month"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+              className="bg-transparent text-xs font-bold text-neutral-800 dark:text-neutral-200 outline-none"
+            />
+          </div>
+          <button
+            onClick={handlePrint}
+            className="btn-secondary text-xs py-2 px-3.5 flex items-center gap-1.5 rounded-xl font-bold"
+          >
+            <Printer size={14} /> Cetak / Ekspor PDF
           </button>
         </div>
       </div>
 
-      {/* Financial Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="kpi-card">
-          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-1">
-            <span className="text-xs font-medium">Total Omzet</span>
-            <DollarSign size={16} className="text-accent-500" />
+      {/* Print-only Title Header */}
+      <div className="hidden print:block mb-6 border-b border-neutral-300 pb-4">
+        <h1 className="text-2xl font-bold text-black">LAH GABIN - LAPORAN KEUANGAN BULANAN</h1>
+        <p className="text-sm text-neutral-600">
+          Periode: {month || 'Semua Periode'} | Dicetak pada: {new Date().toLocaleDateString('id-ID')}
+        </p>
+      </div>
+
+      {/* 4 Financial KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Omzet */}
+        <div className="bankzai-card p-5">
+          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider">Total Omzet</span>
+            <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+              <DollarSign size={16} />
+            </div>
           </div>
-          <p className="font-heading font-extrabold text-2xl text-neutral-900 dark:text-white">
-            {formatRupiah(reportData.omzet_total)}
+          <p className="font-heading font-extrabold text-2xl text-neutral-900 dark:text-white tabular-nums">
+            {formatRupiah(calculations.omzet_total)}
           </p>
-          <span className="text-[11px] text-neutral-400 mt-1 block">{reportData.total_unit_terjual} pcs gabin terjual</span>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-medium flex items-center gap-1">
+            <span>{calculations.total_unit_terjual} pcs gabin</span>
+            <span>•</span>
+            <span>{calculations.total_transaksi} pesanan selesai</span>
+          </p>
         </div>
 
-        <div className="kpi-card">
-          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-1">
-            <span className="text-xs font-medium">Laba Kotor</span>
-            <TrendingUp size={16} className="text-emerald-500" />
+        {/* Laba Kotor */}
+        <div className="bankzai-card p-5">
+          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider">Laba Kotor (Gross)</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+              <TrendingUp size={16} />
+            </div>
           </div>
-          <p className="font-heading font-extrabold text-2xl text-emerald-600 dark:text-emerald-400">
-            {formatRupiah(reportData.laba_kotor)}
+          <p className="font-heading font-extrabold text-2xl text-emerald-600 dark:text-emerald-400 tabular-nums">
+            {formatRupiah(calculations.laba_kotor)}
           </p>
-          <span className="text-[11px] text-neutral-400 mt-1 block">Margin Kotor: 60%</span>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-medium">
+            HPP: {formatRupiah(calculations.hpp_total)} ({calculations.margin_kotor_pct.toFixed(1)}% margin)
+          </p>
         </div>
 
-        <div className="kpi-card border-2 border-accent-500/40">
-          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-1">
-            <span className="text-xs font-bold text-accent-600 dark:text-accent-400">Laba Bersih (Net Profit)</span>
-            <Receipt size={16} className="text-accent-500" />
+        {/* Biaya Operasional */}
+        <div className="bankzai-card p-5">
+          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider">Biaya Operasional</span>
+            <div className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center">
+              <Receipt size={16} />
+            </div>
           </div>
-          <p className="font-heading font-extrabold text-2xl text-accent-500">
-            {formatRupiah(reportData.laba_bersih)}
+          <p className="font-heading font-extrabold text-2xl text-rose-600 dark:text-rose-400 tabular-nums">
+            {formatRupiah(calculations.biaya_operasional)}
           </p>
-          <span className="text-[11px] text-neutral-400 mt-1 block">Net Margin: 46.3%</span>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-medium">
+            {monthExpenses.length} catatan pengeluaran
+          </p>
+        </div>
+
+        {/* Laba Bersih (Net Profit) */}
+        <div className="bankzai-card p-5 border-emerald-500/30 bg-gradient-to-br from-emerald-500/[0.04] to-transparent">
+          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
+            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
+              Laba Bersih (Net Profit)
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <ArrowUpRight size={16} />
+            </div>
+          </div>
+          <p
+            className={`font-heading font-extrabold text-2xl tabular-nums ${
+              calculations.laba_bersih >= 0
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : 'text-rose-600 dark:text-rose-400'
+            }`}
+          >
+            {formatRupiah(calculations.laba_bersih)}
+          </p>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-medium">
+            Net Profit Margin: <strong className="text-neutral-900 dark:text-white">{calculations.margin_bersih_pct.toFixed(1)}%</strong>
+          </p>
         </div>
       </div>
 
-      {/* Channel Breakdown */}
-      <div className="card p-5">
-        <h2 className="font-heading font-bold text-base text-neutral-900 dark:text-white mb-4">
-          Breakdown Saluran Penjualan
+      {/* Income Statement Table (Laporan Laba Rugi Komprehensif) */}
+      <div className="bankzai-card p-6">
+        <h2 className="font-heading font-bold text-base text-neutral-900 dark:text-white mb-4 flex items-center gap-2">
+          <Layers size={18} className="text-blue-500" /> Ringkasan Laporan Laba Rugi (Income Statement)
         </h2>
-        <div className="space-y-3">
-          {reportData.channel_breakdown.map((ch) => (
-            <div key={ch.name} className="p-3.5 bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200/60 dark:border-neutral-700/60 rounded-xl flex items-center justify-between text-xs">
-              <div>
-                <p className="font-bold text-neutral-900 dark:text-white text-sm">{ch.name}</p>
-                <p className="text-neutral-500 dark:text-neutral-400 mt-0.5">{ch.unit} unit transaksi</p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-slate-200/80 dark:border-white/[0.08] text-left">
+                <th className="pb-3 text-[10px] font-extrabold uppercase tracking-wider text-neutral-500">Komponen Keuangan</th>
+                <th className="pb-3 text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 text-right w-40">Nominal (Rp)</th>
+                <th className="pb-3 text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 text-right w-28">% dari Omzet</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-white/[0.04]">
+              {/* Pendapatan Penjualan */}
+              <tr className="font-bold text-neutral-900 dark:text-white">
+                <td className="py-3">1. Pendapatan Penjualan Bersih (Omzet)</td>
+                <td className="py-3 text-right font-heading text-sm tabular-nums">
+                  {formatRupiah(calculations.omzet_total)}
+                </td>
+                <td className="py-3 text-right text-neutral-500">100.0%</td>
+              </tr>
+              {/* HPP */}
+              <tr className="text-neutral-600 dark:text-neutral-300">
+                <td className="py-2.5 pl-4">Harga Pokok Penjualan (HPP / Biaya Bahan Baku Terjual)</td>
+                <td className="py-2.5 text-right font-medium text-rose-500 tabular-nums">
+                  - {formatRupiah(calculations.hpp_total)}
+                </td>
+                <td className="py-2.5 text-right text-neutral-500">
+                  {calculations.omzet_total > 0
+                    ? ((calculations.hpp_total / calculations.omzet_total) * 100).toFixed(1)
+                    : 0}
+                  %
+                </td>
+              </tr>
+              {/* Laba Kotor */}
+              <tr className="font-bold bg-slate-50/70 dark:bg-white/[0.02] text-neutral-900 dark:text-white">
+                <td className="py-3">2. Laba Kotor (Gross Profit)</td>
+                <td className="py-3 text-right font-heading text-sm text-emerald-600 dark:text-emerald-400 tabular-nums">
+                  {formatRupiah(calculations.laba_kotor)}
+                </td>
+                <td className="py-3 text-right text-emerald-600 dark:text-emerald-400 font-bold">
+                  {calculations.margin_kotor_pct.toFixed(1)}%
+                </td>
+              </tr>
+              {/* Beban Operasional Itemized */}
+              {calculations.expense_breakdown.length > 0 ? (
+                calculations.expense_breakdown.map(([cat, amt]) => (
+                  <tr key={cat} className="text-neutral-600 dark:text-neutral-300">
+                    <td className="py-2.5 pl-4">Beban: {cat}</td>
+                    <td className="py-2.5 text-right font-medium text-rose-500 tabular-nums">
+                      - {formatRupiah(amt)}
+                    </td>
+                    <td className="py-2.5 text-right text-neutral-500">
+                      {calculations.omzet_total > 0 ? ((amt / calculations.omzet_total) * 100).toFixed(1) : 0}%
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr className="text-neutral-500 italic">
+                  <td className="py-2.5 pl-4">Tidak ada beban operasional tercatat pada periode ini</td>
+                  <td className="py-2.5 text-right tabular-nums">Rp 0</td>
+                  <td className="py-2.5 text-right">0.0%</td>
+                </tr>
+              )}
+              {/* Total Beban */}
+              <tr className="font-semibold text-neutral-700 dark:text-neutral-300">
+                <td className="py-2.5">Total Beban Operasional</td>
+                <td className="py-2.5 text-right font-bold text-rose-600 dark:text-rose-400 tabular-nums">
+                  - {formatRupiah(calculations.biaya_operasional)}
+                </td>
+                <td className="py-2.5 text-right text-neutral-500">
+                  {calculations.omzet_total > 0
+                    ? ((calculations.biaya_operasional / calculations.omzet_total) * 100).toFixed(1)
+                    : 0}
+                  %
+                </td>
+              </tr>
+              {/* Laba Bersih */}
+              <tr className="font-extrabold bg-emerald-500/10 text-neutral-900 dark:text-white border-t-2 border-emerald-500/30">
+                <td className="py-3.5 text-sm">3. Laba Bersih Usaha (Net Profit)</td>
+                <td
+                  className={`py-3.5 text-right font-heading text-base tabular-nums ${
+                    calculations.laba_bersih >= 0
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-rose-600 dark:text-rose-400'
+                  }`}
+                >
+                  {formatRupiah(calculations.laba_bersih)}
+                </td>
+                <td className="py-3.5 text-right font-extrabold text-emerald-600 dark:text-emerald-400 text-sm">
+                  {calculations.margin_bersih_pct.toFixed(1)}%
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Grid: Channel Breakdown + Expense Categories */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Channel Breakdown */}
+        <div className="bankzai-card p-5">
+          <h2 className="font-heading font-bold text-base text-neutral-900 dark:text-white mb-4 flex items-center gap-2">
+            <PieChart size={18} className="text-accent-500" /> Saluran Penjualan (Online vs POS)
+          </h2>
+          <div className="space-y-3.5">
+            {calculations.channel_breakdown.map((ch) => {
+              const pct = calculations.omzet_total > 0 ? Math.round((ch.omzet / calculations.omzet_total) * 100) : 0;
+              return (
+                <div
+                  key={ch.name}
+                  className="p-4 bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.06] rounded-2xl flex flex-col gap-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/[0.06] flex items-center justify-center">
+                        {ch.icon}
+                      </div>
+                      <div>
+                        <p className="font-bold text-neutral-900 dark:text-white text-xs">{ch.name}</p>
+                        <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                          {ch.transactions} transaksi • {ch.unit} pcs terjual
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-heading font-extrabold text-sm text-neutral-900 dark:text-white block tabular-nums">
+                        {formatRupiah(ch.omzet)}
+                      </span>
+                      <span className="text-[10px] font-bold text-neutral-500">{pct}% dari total</span>
+                    </div>
+                  </div>
+                  <div className="h-1.5 w-full bg-slate-200/60 dark:bg-white/[0.06] rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Expense Categories Breakdown */}
+        <div className="bankzai-card p-5">
+          <h2 className="font-heading font-bold text-base text-neutral-900 dark:text-white mb-4 flex items-center gap-2">
+            <Receipt size={18} className="text-rose-500" /> Rincian Beban Biaya Operasional
+          </h2>
+          <div className="space-y-3">
+            {calculations.expense_breakdown.length > 0 ? (
+              calculations.expense_breakdown.map(([cat, amt]) => {
+                const pct =
+                  calculations.biaya_operasional > 0
+                    ? Math.round((amt / calculations.biaya_operasional) * 100)
+                    : 0;
+                return (
+                  <div
+                    key={cat}
+                    className="p-3 bg-slate-50/80 dark:bg-white/[0.02] rounded-xl border border-slate-100 dark:border-white/[0.04] flex items-center justify-between text-xs"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+                      <div>
+                        <p className="font-bold text-neutral-800 dark:text-neutral-200">{cat}</p>
+                        <p className="text-[10px] text-neutral-400">{pct}% dari total beban</p>
+                      </div>
+                    </div>
+                    <span className="font-heading font-extrabold text-xs text-rose-600 dark:text-rose-400 tabular-nums">
+                      - {formatRupiah(amt)}
+                    </span>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center py-8 text-neutral-400 text-xs">
+                Tidak ada catatan pengeluaran pada periode ini.
               </div>
-              <span className="font-heading font-extrabold text-sm text-neutral-900 dark:text-white">
-                {formatRupiah(ch.omzet)}
-              </span>
-            </div>
-          ))}
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
