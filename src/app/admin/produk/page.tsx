@@ -125,6 +125,15 @@ export default function AdminProductsPage() {
     const numMin = Number(formData.minimum_stock) || 5;
     const imgUrls = formData.image_url ? [formData.image_url] : [];
 
+    // Jika admin sengaja set inactive -> tetap inactive.
+    // Jika aktif / po_mode -> otomatis: stok > 0 jadi 'active', stok === 0 jadi 'po_mode'
+    const computedStatus: 'active' | 'po_mode' | 'inactive' =
+      formData.status === 'inactive'
+        ? 'inactive'
+        : numStock > 0
+          ? 'active'
+          : 'po_mode';
+
     try {
       if (editProduct) {
         // Edit existing
@@ -135,7 +144,7 @@ export default function AdminProductsPage() {
           base_price: numPrice,
           stock_quantity: numStock,
           minimum_stock: numMin,
-          status: formData.status,
+          status: computedStatus,
           image_urls: imgUrls,
           updated_at: new Date().toISOString(),
         };
@@ -172,7 +181,7 @@ export default function AdminProductsPage() {
           hpp_per_pcs: 0,
           stock_quantity: numStock,
           minimum_stock: numMin,
-          status: formData.status,
+          status: computedStatus,
           image_urls: imgUrls,
           discount_price: null,
           discount_start_date: null,
@@ -219,8 +228,15 @@ export default function AdminProductsPage() {
   };
 
   const toggleStatus = async (p: Product) => {
-    const cycle: ('active' | 'po_mode' | 'inactive')[] = ['active', 'po_mode', 'inactive'];
-    const next = cycle[(cycle.indexOf(p.status) + 1) % cycle.length];
+    // Jika nonaktif -> aktifkan (otomatis 'active' jika stok > 0, atau 'po_mode' jika stok 0)
+    // Jika aktif / po_mode -> jadikan nonaktif ('inactive')
+    const next: 'active' | 'po_mode' | 'inactive' =
+      p.status === 'inactive'
+        ? p.stock_quantity > 0
+          ? 'active'
+          : 'po_mode'
+        : 'inactive';
+
     const updated = { ...p, status: next };
 
     const newList = products.map((item) => (item.id === p.id ? updated : item));

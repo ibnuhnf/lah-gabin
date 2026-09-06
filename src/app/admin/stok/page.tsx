@@ -156,12 +156,28 @@ export default function AdminStockPage() {
     };
 
     try {
-      // 1. Update product stock
+      // 1. Tentukan status baru otomatis (stok > 0 => active, stok = 0 => po_mode).
+      //    Jika produk sebelumnya inactive, pertahankan inactive.
+      let newStatus: 'active' | 'po_mode' | 'inactive' | null = null;
+      try {
+        const localProd = localStorage.getItem('lah_gabin_admin_products');
+        if (localProd) {
+          const parsed = JSON.parse(localProd);
+          const found = parsed.find((pp: Product) => pp.id === productId);
+          if (found && found.status !== 'inactive') {
+            newStatus = after > 0 ? 'active' : 'po_mode';
+          }
+        }
+      } catch {}
+
+      // 2. Update product stock
       if (isSupabaseConfigured()) {
-        await supabase
-          .from('products')
-          .update({ stock_quantity: after, updated_at: now })
-          .eq('id', productId);
+        const updatePayload: Record<string, unknown> = {
+          stock_quantity: after,
+          updated_at: now,
+        };
+        if (newStatus) updatePayload.status = newStatus;
+        await supabase.from('products').update(updatePayload).eq('id', productId);
 
         await supabase.from('stock_mutations').insert({
           id: mutation.id,
@@ -176,14 +192,19 @@ export default function AdminStockPage() {
         });
       }
 
-      // 2. Always update local cache too
+      // 3. Always update local cache too
       try {
         const localProd = localStorage.getItem('lah_gabin_admin_products');
         if (localProd) {
           const parsed = JSON.parse(localProd);
-          const newList = parsed.map((p: Product) =>
-            p.id === productId ? { ...p, stock_quantity: after } : p
-          );
+          const newList = parsed.map((p: Product) => {
+            if (p.id !== productId) return p;
+            return {
+              ...p,
+              stock_quantity: after,
+              status: newStatus ?? p.status,
+            };
+          });
           localStorage.setItem('lah_gabin_admin_products', JSON.stringify(newList));
         }
         const newMutations = [mutation, ...mutations];
