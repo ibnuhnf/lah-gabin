@@ -137,41 +137,22 @@ export default function AdminReportsPage() {
     });
   }, [expenses, month]);
 
-  // Financial Calculations
+  // Financial Calculations (Sederhana: Pendapatan Bulan Ini - Pengeluaran Bulan Ini)
   const calculations = useMemo(() => {
     const omzet_total = monthOrders.reduce((acc, o) => acc + (Number(o.final_amount) || 0), 0);
     const total_transaksi = monthOrders.length;
 
-    // Hitung total unit dan total HPP
+    // Total unit terjual
     let total_unit_terjual = 0;
-    let hpp_total = 0;
-
-    // Helper map product id/name to hpp
-    const hppMap: Record<string, number> = {};
-    products.forEach((p) => {
-      hppMap[p.id] = Number(p.hpp_per_pcs) || 3000;
-      hppMap[p.name.toLowerCase().trim()] = Number(p.hpp_per_pcs) || 3000;
-    });
-
-    const stripBarSuffix = (s: string) => s.replace(/\s*\([^)]*\)\s*$/, '').trim();
-
     monthOrders.forEach((o) => {
       const items = o.items || o.order_items || [];
       items.forEach((it) => {
-        const qty = Number(it.quantity) || 0;
-        total_unit_terjual += qty;
-
-        const baseName = stripBarSuffix(it.product_name || '').toLowerCase();
-        const unitHpp = hppMap[it.product_id] || hppMap[baseName] || 3000; // default 3k jika belum diset
-        hpp_total += unitHpp * qty;
+        total_unit_terjual += Number(it.quantity) || 0;
       });
     });
 
-    const laba_kotor = omzet_total - hpp_total;
-    const biaya_operasional = monthExpenses.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
-    const laba_bersih = laba_kotor - biaya_operasional;
-
-    const margin_kotor_pct = omzet_total > 0 ? (laba_kotor / omzet_total) * 100 : 0;
+    const pengeluaran_total = monthExpenses.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
+    const laba_bersih = omzet_total - pengeluaran_total;
     const margin_bersih_pct = omzet_total > 0 ? (laba_bersih / omzet_total) * 100 : 0;
 
     // Breakdown Channel
@@ -200,11 +181,8 @@ export default function AdminReportsPage() {
       omzet_total,
       total_transaksi,
       total_unit_terjual,
-      hpp_total,
-      laba_kotor,
-      biaya_operasional,
+      pengeluaran_total,
       laba_bersih,
-      margin_kotor_pct,
       margin_bersih_pct,
       channel_breakdown: [
         {
@@ -224,7 +202,7 @@ export default function AdminReportsPage() {
       ],
       expense_breakdown: Object.entries(expenseByCategory).sort((a, b) => b[1] - a[1]),
     };
-  }, [monthOrders, monthExpenses, products]);
+  }, [monthOrders, monthExpenses]);
 
   const handlePrint = () => {
     window.print();
@@ -236,10 +214,10 @@ export default function AdminReportsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
         <div>
           <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-neutral-900 dark:text-white tracking-tight flex items-center gap-2.5">
-            <BarChart3 size={26} className="text-emerald-500" /> Laporan Keuangan & Laba Rugi
+            <BarChart3 size={26} className="text-emerald-500" /> Laporan Keuangan & Laba Bersih
           </h1>
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 font-medium">
-            Analisis omzet, HPP, beban operasional, dan laba bersih usaha secara realtime.
+            Perhitungan laba bersih bulanan: <strong>Pendapatan Penjualan dikurangi Pengeluaran Operasional</strong>.
           </p>
         </div>
         <div className="flex items-center gap-2.5">
@@ -274,7 +252,7 @@ export default function AdminReportsPage() {
         {/* Total Omzet */}
         <div className="bankzai-card p-5">
           <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider">Total Omzet</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Pendapatan (Omzet)</span>
             <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
               <DollarSign size={16} />
             </div>
@@ -285,43 +263,27 @@ export default function AdminReportsPage() {
           <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-medium flex items-center gap-1">
             <span>{calculations.total_unit_terjual} pcs gabin</span>
             <span>•</span>
-            <span>{calculations.total_transaksi} pesanan selesai</span>
+            <span>{calculations.total_transaksi} transaksi selesai</span>
           </p>
         </div>
 
-        {/* Laba Kotor */}
+        {/* Pengeluaran Bulan Ini */}
         <div className="bankzai-card p-5">
           <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider">Laba Kotor (Gross)</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
-              <TrendingUp size={16} />
-            </div>
-          </div>
-          <p className="font-heading font-extrabold text-2xl text-emerald-600 dark:text-emerald-400 tabular-nums">
-            {formatRupiah(calculations.laba_kotor)}
-          </p>
-          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-medium">
-            HPP: {formatRupiah(calculations.hpp_total)} ({calculations.margin_kotor_pct.toFixed(1)}% margin)
-          </p>
-        </div>
-
-        {/* Biaya Operasional */}
-        <div className="bankzai-card p-5">
-          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider">Biaya Operasional</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Total Pengeluaran</span>
             <div className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center">
               <Receipt size={16} />
             </div>
           </div>
           <p className="font-heading font-extrabold text-2xl text-rose-600 dark:text-rose-400 tabular-nums">
-            {formatRupiah(calculations.biaya_operasional)}
+            {formatRupiah(calculations.pengeluaran_total)}
           </p>
           <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-medium">
-            {monthExpenses.length} catatan pengeluaran
+            {monthExpenses.length} transaksi pengeluaran
           </p>
         </div>
 
-        {/* Laba Bersih (Net Profit) */}
+        {/* Laba Bersih Bulan Ini */}
         <div className="bankzai-card p-5 border-emerald-500/30 bg-gradient-to-br from-emerald-500/[0.04] to-transparent">
           <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
             <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
@@ -341,15 +303,31 @@ export default function AdminReportsPage() {
             {formatRupiah(calculations.laba_bersih)}
           </p>
           <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-medium">
-            Net Profit Margin: <strong className="text-neutral-900 dark:text-white">{calculations.margin_bersih_pct.toFixed(1)}%</strong>
+            Pendapatan dikurangi Pengeluaran
+          </p>
+        </div>
+
+        {/* Margin Laba */}
+        <div className="bankzai-card p-5">
+          <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider">Profit Margin</span>
+            <div className="w-8 h-8 rounded-xl bg-accent-500/10 text-accent-600 dark:text-accent-400 flex items-center justify-center">
+              <TrendingUp size={16} />
+            </div>
+          </div>
+          <p className="font-heading font-extrabold text-2xl text-neutral-900 dark:text-white tabular-nums">
+            {calculations.margin_bersih_pct.toFixed(1)}%
+          </p>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-medium">
+            Rasio laba terhadap omzet
           </p>
         </div>
       </div>
 
-      {/* Income Statement Table (Laporan Laba Rugi Komprehensif) */}
+      {/* Income Statement Table (Laporan Laba Rugi Sederhana) */}
       <div className="bankzai-card p-6">
         <h2 className="font-heading font-bold text-base text-neutral-900 dark:text-white mb-4 flex items-center gap-2">
-          <Layers size={18} className="text-blue-500" /> Ringkasan Laporan Laba Rugi (Income Statement)
+          <Layers size={18} className="text-blue-500" /> Ringkasan Laporan Laba Bersih Bulanan
         </h2>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -362,41 +340,18 @@ export default function AdminReportsPage() {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-white/[0.04]">
               {/* Pendapatan Penjualan */}
-              <tr className="font-bold text-neutral-900 dark:text-white">
-                <td className="py-3">1. Pendapatan Penjualan Bersih (Omzet)</td>
-                <td className="py-3 text-right font-heading text-sm tabular-nums">
-                  {formatRupiah(calculations.omzet_total)}
+              <tr className="font-bold bg-slate-50/50 dark:bg-white/[0.02] text-neutral-900 dark:text-white">
+                <td className="py-3">1. Total Pendapatan Penjualan (Omzet)</td>
+                <td className="py-3 text-right font-heading text-sm tabular-nums text-emerald-600 dark:text-emerald-400 font-extrabold">
+                  + {formatRupiah(calculations.omzet_total)}
                 </td>
                 <td className="py-3 text-right text-neutral-500">100.0%</td>
               </tr>
-              {/* HPP */}
-              <tr className="text-neutral-600 dark:text-neutral-300">
-                <td className="py-2.5 pl-4">Harga Pokok Penjualan (HPP / Biaya Bahan Baku Terjual)</td>
-                <td className="py-2.5 text-right font-medium text-rose-500 tabular-nums">
-                  - {formatRupiah(calculations.hpp_total)}
-                </td>
-                <td className="py-2.5 text-right text-neutral-500">
-                  {calculations.omzet_total > 0
-                    ? ((calculations.hpp_total / calculations.omzet_total) * 100).toFixed(1)
-                    : 0}
-                  %
-                </td>
-              </tr>
-              {/* Laba Kotor */}
-              <tr className="font-bold bg-slate-50/70 dark:bg-white/[0.02] text-neutral-900 dark:text-white">
-                <td className="py-3">2. Laba Kotor (Gross Profit)</td>
-                <td className="py-3 text-right font-heading text-sm text-emerald-600 dark:text-emerald-400 tabular-nums">
-                  {formatRupiah(calculations.laba_kotor)}
-                </td>
-                <td className="py-3 text-right text-emerald-600 dark:text-emerald-400 font-bold">
-                  {calculations.margin_kotor_pct.toFixed(1)}%
-                </td>
-              </tr>
-              {/* Beban Operasional Itemized */}
+              {/* Beban Pengeluaran Itemized */}
               {calculations.expense_breakdown.length > 0 ? (
                 calculations.expense_breakdown.map(([cat, amt]) => (
                   <tr key={cat} className="text-neutral-600 dark:text-neutral-300">
-                    <td className="py-2.5 pl-4">Beban: {cat}</td>
+                    <td className="py-2.5 pl-4">Pengeluaran: {cat}</td>
                     <td className="py-2.5 text-right font-medium text-rose-500 tabular-nums">
                       - {formatRupiah(amt)}
                     </td>
@@ -407,27 +362,27 @@ export default function AdminReportsPage() {
                 ))
               ) : (
                 <tr className="text-neutral-500 italic">
-                  <td className="py-2.5 pl-4">Tidak ada beban operasional tercatat pada periode ini</td>
+                  <td className="py-2.5 pl-4">Tidak ada pengeluaran tercatat pada periode ini</td>
                   <td className="py-2.5 text-right tabular-nums">Rp 0</td>
                   <td className="py-2.5 text-right">0.0%</td>
                 </tr>
               )}
-              {/* Total Beban */}
-              <tr className="font-semibold text-neutral-700 dark:text-neutral-300">
-                <td className="py-2.5">Total Beban Operasional</td>
+              {/* Total Pengeluaran */}
+              <tr className="font-bold text-neutral-900 dark:text-white">
+                <td className="py-2.5">2. Total Pengeluaran Bulan Ini</td>
                 <td className="py-2.5 text-right font-bold text-rose-600 dark:text-rose-400 tabular-nums">
-                  - {formatRupiah(calculations.biaya_operasional)}
+                  - {formatRupiah(calculations.pengeluaran_total)}
                 </td>
                 <td className="py-2.5 text-right text-neutral-500">
                   {calculations.omzet_total > 0
-                    ? ((calculations.biaya_operasional / calculations.omzet_total) * 100).toFixed(1)
+                    ? ((calculations.pengeluaran_total / calculations.omzet_total) * 100).toFixed(1)
                     : 0}
                   %
                 </td>
               </tr>
               {/* Laba Bersih */}
               <tr className="font-extrabold bg-emerald-500/10 text-neutral-900 dark:text-white border-t-2 border-emerald-500/30">
-                <td className="py-3.5 text-sm">3. Laba Bersih Usaha (Net Profit)</td>
+                <td className="py-3.5 text-sm">3. Laba Bersih Bulan Ini (Pendapatan - Pengeluaran)</td>
                 <td
                   className={`py-3.5 text-right font-heading text-base tabular-nums ${
                     calculations.laba_bersih >= 0
