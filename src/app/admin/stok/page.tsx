@@ -56,32 +56,38 @@ export default function AdminStockPage() {
   }, []);
 
   async function loadAll() {
-    // Load products from Supabase
+    // 1. Load products (pakai variabel lokal agar bisa memetakan product_id ke nama)
+    let productList: Product[] = [];
     if (isSupabaseConfigured()) {
       try {
         const { data: prodData, error: prodErr } = await supabase
           .from('products')
           .select('id, name, stock_quantity')
           .order('name');
-        if (!prodErr && prodData) setProducts(prodData);
+        if (!prodErr && prodData) {
+          productList = prodData as Product[];
+          setProducts(productList);
+        }
       } catch {}
     } else {
       try {
         const local = localStorage.getItem('lah_gabin_admin_products');
         if (local) {
           const parsed = JSON.parse(local);
-          setProducts(
-            parsed.map((p: { id: string; name: string; stock_quantity: number }) => ({
-              id: p.id,
-              name: p.name,
-              stock_quantity: p.stock_quantity,
-            }))
-          );
+          productList = parsed.map((p: { id: string; name: string; stock_quantity: number }) => ({
+            id: p.id,
+            name: p.name,
+            stock_quantity: p.stock_quantity,
+          }));
+          setProducts(productList);
         }
       } catch {}
     }
 
-    // Load stock_mutations from Supabase
+    const productMap = new Map(productList.map((p) => [p.id, p.name]));
+
+    // 2. Muat dari Supabase (jika konfigured). TETAP lanjut ke localStorage walau hasilnya [].
+    const remoteMutations: StockMutation[] = [];
     if (isSupabaseConfigured()) {
       try {
         const { data: mutData, error: mutErr } = await supabase
@@ -89,29 +95,39 @@ export default function AdminStockPage() {
           .select('*')
           .order('created_at', { ascending: false });
         if (!mutErr && mutData) {
-          setMutations(
-            mutData.map((m: Record<string, unknown>) => ({
-              id: m.id as string,
-              item: (m.product_id as string) || '-',
-              type: m.mutation_type as string,
-              qty: m.quantity_change as number,
-              before: m.stock_before as number,
-              after: m.stock_after as number,
+          for (const m of mutData as Record<string, unknown>[]) {
+            const pid = (m.product_id as string) || '';
+            remoteMutations.push({
+              id: String(m.id),
+              item: productMap.get(pid) || pid || '-',
+              type: String(m.mutation_type),
+              qty: Number(m.quantity_change) || 0,
+              before: Number(m.stock_before) || 0,
+              after: Number(m.stock_after) || 0,
               ref: (m.reference_id as string) || null,
               notes: (m.notes as string) || '-',
-              time: m.created_at as string,
-            }))
-          );
-          return;
+              time: String(m.created_at),
+            });
+          }
         }
       } catch {}
     }
 
-    // Fallback to localStorage
+    // 3. Selalu muat juga dari localStorage (cadangan offline / mock ID)
+    let localMutations: StockMutation[] = [];
     try {
       const local = localStorage.getItem('lah_gabin_stock_mutations');
-      if (local) setMutations(JSON.parse(local));
+      if (local) localMutations = JSON.parse(local);
     } catch {}
+
+    // 4. Gabungkan, dedupe by id (remote menang), urutkan terbaru di atas
+    const seen = new Set(remoteMutations.map((m) => m.id));
+    const merged = [...remoteMutations];
+    for (const m of localMutations) {
+      if (!seen.has(m.id)) merged.push(m);
+    }
+    merged.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+    setMutations(merged);
   }
 
   function getDeltaForType(t: string, q: number): number {
@@ -170,29 +186,34 @@ export default function AdminStockPage() {
         }
       } catch {}
 
-      // 2. Update product stock
+      // 2. Update product stock & insert stock mutation di Supabase jika valid
       if (isSupabaseConfigured()) {
-        const updatePayload: Record<string, unknown> = {
-          stock_quantity: after,
-          updated_at: now,
-        };
-        if (newStatus) updatePayload.status = newStatus;
-        await supabase.from('products').update(updatePayload).eq('id', productId);
+        try {
+          const updatePayload: Record<string, unknown> = {
+            stock_quantity: after,
+            updated_at: now,
+          };
+          if (newStatus) updatePayload.status = newStatus;
+          await supabase.from('products').update(updatePayload).eq('id', productId);
 
-        await supabase.from('stock_mutations').insert({
-          id: mutation.id,
-          product_id: productId,
-          mutation_type: type,
-          quantity_change: delta,
-          stock_before: before,
-          stock_after: after,
-          reference_id: null,
-          notes: notes || '-',
-          created_at: now,
-        });
+          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(productId);
+          await supabase.from('stock_mutations').insert({
+            id: mutation.id,
+            product_id: isUuid ? productId : null,
+            mutation_type: type,
+            quantity_change: delta,
+            stock_before: before,
+            stock_after: after,
+            reference_id: null,
+            notes: `${product.name}: ${notes || '-'}`,
+            created_at: now,
+          });
+        } catch (supabaseErr) {
+          console.warn('Supabase mutation sync error:', supabaseErr);
+        }
       }
 
-      // 3. Always update local cache too
+      // 3. Selalu simpan di cache lokal (agar langsung terlihat di UI)
       try {
         const localProd = localStorage.getItem('lah_gabin_admin_products');
         if (localProd) {
