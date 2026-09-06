@@ -57,21 +57,6 @@ export default function AdminDashboardPage() {
       if (savedCash) setCashTransactions(JSON.parse(savedCash));
     } catch {}
 
-    function syncFromStorage(e: StorageEvent) {
-      if (e.key === 'lah_gabin_admin_orders' && e.newValue) {
-        try {
-          setOrders(JSON.parse(e.newValue));
-        } catch {}
-      }
-      if (e.key === 'lah_gabin_cash_transactions' && e.newValue) {
-        try {
-          setCashTransactions(JSON.parse(e.newValue));
-        } catch {}
-      }
-    }
-    window.addEventListener('storage', syncFromStorage);
-    return () => window.removeEventListener('storage', syncFromStorage);
-
     async function loadData() {
       if (isSupabaseConfigured()) {
         try {
@@ -93,7 +78,45 @@ export default function AdminDashboardPage() {
         }
       }
     }
+
     loadData();
+
+    function syncFromStorage(e: StorageEvent) {
+      if (e.key === 'lah_gabin_admin_orders' && e.newValue) {
+        try {
+          setOrders(JSON.parse(e.newValue));
+        } catch {}
+      }
+      if (e.key === 'lah_gabin_cash_transactions' && e.newValue) {
+        try {
+          setCashTransactions(JSON.parse(e.newValue));
+        } catch {}
+      }
+      if (e.key === 'lah_gabin_admin_products' && e.newValue) {
+        try {
+          setProducts(JSON.parse(e.newValue));
+        } catch {}
+      }
+    }
+
+    const onFocus = () => {
+      try {
+        const savedProducts = localStorage.getItem('lah_gabin_admin_products');
+        if (savedProducts) setProducts(JSON.parse(savedProducts));
+        const savedOrders = localStorage.getItem('lah_gabin_admin_orders');
+        if (savedOrders) setOrders(JSON.parse(savedOrders));
+        const savedCash = localStorage.getItem('lah_gabin_cash_transactions');
+        if (savedCash) setCashTransactions(JSON.parse(savedCash));
+      } catch {}
+      loadData();
+    };
+
+    window.addEventListener('storage', syncFromStorage);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.removeEventListener('storage', syncFromStorage);
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
 
   const now = new Date();
@@ -158,14 +181,19 @@ export default function AdminDashboardPage() {
     });
   });
 
+  // Helper: nama order_items kadang ber-suffix "(Gabin Bar)" / "(Crackers)" — strip agar sinkron dengan products
+  const stripBarSuffix = (s: string) => s.replace(/\s*\([^)]*\)\s*$/, '').trim();
+
   const productionTable = Object.entries(productionMap)
     .map(([name, orderedQty]) => {
-      const prod = products.find((p) => p.name.toLowerCase().trim() === name.toLowerCase().trim());
+      const baseName = stripBarSuffix(name);
+      const prod = products.find((p) => p.name.toLowerCase().trim() === baseName.toLowerCase().trim());
       const currentStock = prod ? prod.stock_quantity : 0;
       // Wajib dibuat = selisih bila stok ready tidak mencukupi antrean
       const needToProduce = Math.max(0, orderedQty - currentStock);
       return {
         name,
+        baseName,
         orderedQty,
         currentStock,
         needToProduce,
@@ -396,11 +424,11 @@ export default function AdminDashboardPage() {
                       <td className="px-3 py-3 text-right">
                         {isDeficit ? (
                           <span className="bankzai-badge bankzai-badge-pending text-[10px]">
-                            ⚠️ Goreng {item.needToProduce} {item.unit}
+                            ⚠️ Buat {item.needToProduce} {item.unit}
                           </span>
                         ) : (
                           <span className="bankzai-badge bankzai-badge-completed text-[10px]">
-                            ✓ Stok Cukup
+                            ✓ Stok Siap
                           </span>
                         )}
                       </td>
