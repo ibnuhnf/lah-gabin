@@ -250,6 +250,8 @@ export default function AdminDashboardPage() {
     return map[status] || { label: status, cls: 'bankzai-badge-pending' };
   };
 
+  const totalStockReady = products.reduce((acc, curr) => acc + (curr.stock_quantity || 0), 0);
+
   return (
     <div className="space-y-6">
       {/* Page Heading */}
@@ -287,53 +289,103 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* 5 KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
-        <KPICard
-          title="Pemasukan"
-          icon={<DollarSign size={18} />}
-          value={formatRupiah(omzet)}
-          trend={omzet > 0 ? "up" : "down"}
-          trendText={`${totalTransactions} transaksi lunas`}
-          color="blue"
-          trendIcon={<ArrowUpRight size={13} />}
-        />
-        <KPICard
-          title="Gabin Terjual"
-          icon={<PackageCheck size={18} />}
-          value={`${totalAllPcsSold} pcs`}
-          trend={totalAllPcsSold > 0 ? "up" : "down"}
-          trendText={`${totalTerjualList.length} varian laku`}
-          color="emerald"
-          trendIcon={<Flame size={13} />}
-        />
-        <KPICard
-          title="Pengeluaran"
-          icon={<TrendingUp size={18} />}
-          value={formatRupiah(totalPengeluaran)}
-          trend="down"
-          trendText="Bahan baku & operasional"
-          color="rose"
-          trendIcon={<ArrowDownRight size={13} />}
-        />
-        <KPICard
-          title="Pesanan"
-          icon={<ShoppingCart size={18} />}
-          value={`${periodOrders.length}`}
-          trend={periodOrders.length > 0 ? "up" : "down"}
-          trendText={`${activeQueue.length} antrean aktif`}
-          color="amber"
-          trendIcon={<Clock size={13} />}
-        />
-        <KPICard
-          title="Saldo Kas"
-          icon={<DollarSign size={18} />}
-          value={formatRupiah(saldoKas)}
-          trend={saldoKas >= 0 ? "up" : "down"}
-          trendText="Saldo kas tersedia"
-          color="emerald"
-          trendIcon={<Zap size={13} />}
-        />
+      {/* SEKSI 1: KEUANGAN & TRANSAKSI */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-4 rounded-full bg-blue-500" />
+            <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+              Ringkasan Keuangan & Transaksi
+            </h2>
+          </div>
+          <span className="text-[11px] font-medium text-neutral-400">
+            {period === 'today' ? 'Data Realtime Hari Ini' : 'Akumulasi Bulan Ini'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+          <KPICard
+            title="Total Pemasukan"
+            icon={<DollarSign size={18} />}
+            value={formatRupiah(omzet)}
+            trend={omzet > 0 ? "up" : "down"}
+            trendText={`${totalTransactions} transaksi lunas`}
+            color="blue"
+            trendIcon={<ArrowUpRight size={13} />}
+          />
+          <KPICard
+            title="Pengeluaran"
+            icon={<TrendingUp size={18} />}
+            value={formatRupiah(totalPengeluaran)}
+            trend="down"
+            trendText="Biaya operasional"
+            color="rose"
+            trendIcon={<ArrowDownRight size={13} />}
+          />
+          <KPICard
+            title="Saldo Kas"
+            icon={<DollarSign size={18} />}
+            value={formatRupiah(saldoKas)}
+            trend={saldoKas >= 0 ? "up" : "down"}
+            trendText="Saldo kas tersedia"
+            color="emerald"
+            trendIcon={<Zap size={13} />}
+          />
+          <KPICard
+            title="Total Pesanan"
+            icon={<ShoppingCart size={18} />}
+            value={`${periodOrders.length}`}
+            trend={periodOrders.length > 0 ? "up" : "down"}
+            trendText={`${activeQueue.length} antrean aktif`}
+            color="amber"
+            trendIcon={<Clock size={13} />}
+          />
+        </div>
+      </div>
+
+      {/* SEKSI 2: STOK & PERFORMA PRODUKSI */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-4 rounded-full bg-emerald-500" />
+            <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+              Stok Produk & Performa Penjualan
+            </h2>
+          </div>
+          <span className="text-[11px] font-medium text-neutral-400">
+            {products.length} Varian Terdaftar
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          <KPICard
+            title="Gabin Terjual"
+            icon={<PackageCheck size={18} />}
+            value={`${totalAllPcsSold} pcs`}
+            trend={totalAllPcsSold > 0 ? "up" : "down"}
+            trendText={`${totalTerjualList.length} varian laku`}
+            color="emerald"
+            trendIcon={<Flame size={13} />}
+          />
+          <KPICard
+            title="Total Stok Tersisa"
+            icon={<Package size={18} />}
+            value={`${totalStockReady} pcs`}
+            trend={totalStockReady > 20 ? "up" : "down"}
+            trendText={`${criticalStockList.length > 0 ? `${criticalStockList.length} varian menipis` : 'Stok aman'}`}
+            color={totalStockReady > 20 ? "blue" : "amber"}
+            trendIcon={<Package size={13} />}
+          />
+          <KPICard
+            title="Kekurangan Produksi"
+            icon={<ChefHat size={18} />}
+            value={`${totalMustProduce} pcs`}
+            trend={totalMustProduce > 0 ? "down" : "up"}
+            trendText={totalMustProduce > 0 ? "Harus segera dibuat" : "Semua antrean terpenuhi"}
+            color={totalMustProduce > 0 ? "rose" : "emerald"}
+            trendIcon={<AlertTriangle size={13} />}
+          />
+        </div>
       </div>
 
       {/* Tabel Rencana & Kebutuhan Produksi Gabin (Yang Harus Dibuat) */}
