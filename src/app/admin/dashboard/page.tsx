@@ -23,6 +23,7 @@ import type { Order, Product } from '@/types';
 
 import { fetchAllOrders } from '@/lib/orderStore';
 import { fetchAllCashTransactions } from '@/lib/cashbookStore';
+import { fetchAllExpenses } from '@/lib/expenseStore';
 
 const INITIAL_CRITICAL_STOCK = [
   { name: 'Es Gabin Tiramisu', stock: 0, min: 5, unit: 'pcs' },
@@ -40,18 +41,21 @@ export default function AdminDashboardPage() {
   const [period, setPeriod] = useState<'today' | 'this_month'>('today');
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [cashTransactions, setCashTransactions] = useState<
-    { id: string; type: 'IN' | 'OUT'; amount: number; time: string }[]
+    { id: string; type: 'IN' | 'OUT'; amount: number; time: string; created_at?: string }[]
   >([]);
 
   const loadData = async () => {
     try {
-      const [allOrders, allCash] = await Promise.all([
+      const [allOrders, allCash, allExpenses] = await Promise.all([
         fetchAllOrders(),
         fetchAllCashTransactions(),
+        fetchAllExpenses(),
       ]);
       setOrders(allOrders);
       setCashTransactions(allCash);
+      setExpenses(allExpenses);
 
       if (isSupabaseConfigured()) {
         const { data: dbProducts } = await supabase.from('products').select('*');
@@ -72,7 +76,7 @@ export default function AdminDashboardPage() {
 
     const interval = setInterval(() => {
       loadData();
-    }, 6000);
+    }, 5000);
 
     const onFocus = () => {
       loadData();
@@ -86,13 +90,42 @@ export default function AdminDashboardPage() {
   }, []);
 
   const now = new Date();
-  const isToday = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+
+  const parseToDate = (val?: string): Date | null => {
+    if (!val) return null;
+    const direct = new Date(val);
+    if (!isNaN(direct.getTime())) return direct;
+
+    const ymd = val.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (ymd) {
+      return new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]));
+    }
+
+    const slashDmy = val.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    if (slashDmy) {
+      return new Date(Number(slashDmy[3]), Number(slashDmy[2]) - 1, Number(slashDmy[1]));
+    }
+
+    return null;
   };
-  const isThisMonth = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+
+  const isToday = (dateStr?: string) => {
+    const d = parseToDate(dateStr);
+    if (!d) return true;
+    return (
+      d.getDate() === now.getDate() &&
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear()
+    );
+  };
+
+  const isThisMonth = (dateStr?: string) => {
+    const d = parseToDate(dateStr);
+    if (!d) return true;
+    return (
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear()
+    );
   };
 
   const periodOrders = orders.filter((o) =>
@@ -106,18 +139,23 @@ export default function AdminDashboardPage() {
   const labaKotor = omzet - hppTotal;
   const labaBersih = Math.max(0, labaKotor);
 
-  // Hitung saldo kas dari mutasi kas riil di localStorage
-  const totalCashIn = cashTransactions.filter((t) => t.type === 'IN').reduce((s, t) => s + t.amount, 0);
-  const totalCashOut = cashTransactions.filter((t) => t.type === 'OUT').reduce((s, t) => s + t.amount, 0);
+  // Hitung saldo kas dari mutasi kas riil
+  const totalCashIn = cashTransactions.filter((t) => t.type === 'IN').reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  const totalCashOut = cashTransactions.filter((t) => t.type === 'OUT').reduce((s, t) => s + (Number(t.amount) || 0), 0);
   const saldoKas = totalCashIn - totalCashOut;
 
-  // Pengeluaran = total kas OUT (sama dengan Buku Kas) yang masuk dalam periode ini
-  const isCashInPeriod = (dateStr: string) =>
-    period === 'today' ? isToday(dateStr) : isThisMonth(dateStr);
-  const totalPengeluaran = cashTransactions
+  // Pengeluaran = total pengeluaran dalam periode ini (sinkron antara menu Pengeluaran & Buku Kas)
+  const expensesInPeriod = expenses.filter((e) =>
+    period === 'today' ? isToday(e.date || e.created_at) : isThisMonth(e.date || e.created_at)
+  );
+  const totalExpenseAmount = expensesInPeriod.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+
+  const cashOutInPeriod = cashTransactions
     .filter((t) => t.type === 'OUT')
-    .filter((t) => isCashInPeriod(t.time))
-    .reduce((s, t) => s + (t.amount || 0), 0);
+    .filter((t) => (period === 'today' ? isToday(t.created_at || t.time) : isThisMonth(t.created_at || t.time)));
+  const totalCashOutAmount = cashOutInPeriod.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+
+  const totalPengeluaran = totalExpenseAmount > 0 ? totalExpenseAmount : totalCashOutAmount;
 
   const activeQueue = orders.filter(
     (o) => o.status === 'PENDING_APPROVAL' || o.status === 'DITERIMA_PROSES' || o.status === 'DIPROSES'
