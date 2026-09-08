@@ -63,9 +63,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                 : 'bg-amber-600/90 text-white'
             }`}
           >
-            {stockLabel === 'ready'
-              ? `Ready (${product.stock_quantity ?? 0})`
-              : 'Pre-Order'}
+            {stockLabel === 'ready' ? 'Ready' : 'Pre-Order'}
           </span>
         )}
 
@@ -74,6 +72,14 @@ export default function ProductCard({ product }: ProductCardProps) {
           <span className="absolute top-2.5 right-2.5 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-600 text-white shadow-sm">
             PROMO
           </span>
+        )}
+
+        {/* Box Sisa Stok di dalam kotak gambar tepat di atas nama produk */}
+        {stockLabel === 'ready' && (
+          <div className="absolute bottom-2 left-2.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-900/85 dark:bg-black/85 backdrop-blur-md text-white text-[11px] font-bold border border-white/15 shadow-sm">
+            <span className="text-slate-300 dark:text-neutral-300 font-medium text-[10px]">Sisa Stok :</span>
+            <span className="text-emerald-400 font-extrabold">{product.stock_quantity ?? 0}</span>
+          </div>
         )}
       </div>
 
