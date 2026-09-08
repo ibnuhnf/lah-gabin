@@ -453,8 +453,8 @@ export default function AdminReportsPage() {
             {calculations.expense_breakdown.length > 0 ? (
               calculations.expense_breakdown.map(([cat, amt]) => {
                 const pct =
-                  calculations.biaya_operasional > 0
-                    ? Math.round((amt / calculations.biaya_operasional) * 100)
+                  calculations.pengeluaran_total > 0
+                    ? Math.round((amt / calculations.pengeluaran_total) * 100)
                     : 0;
                 return (
                   <div

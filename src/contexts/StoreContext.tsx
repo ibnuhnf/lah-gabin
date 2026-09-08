@@ -14,6 +14,8 @@ interface StoreContextValue {
 const DEFAULT_CONFIG: StoreConfig = {
   id: 'default',
   is_open: true,
+  po_notes: '',
+  po_delivery_date: null,
   wa_number: '6282121498255',
   qris_image_url: '',
   bank_account_info: 'BCA 123-456-789 a/n Lah Gabin',

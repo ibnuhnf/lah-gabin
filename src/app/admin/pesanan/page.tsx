@@ -22,6 +22,7 @@ interface Order {
   discount_amount?: number;
   status: 'PENDING_APPROVAL' | 'DITERIMA_PROSES' | 'DIPROSES' | 'SELESAI' | 'DIBATALKAN';
   cancellation_reason?: string;
+  order_source?: string;
   items: OrderItem[];
   created_at: string;
 }
@@ -115,10 +116,41 @@ export default function AdminOrdersPage() {
   };
 
   const markCompleted = async (id: string) => {
+    const targetOrder = orders.find((o) => o.id === id);
     const updated = orders.map((o) =>
       o.id === id ? { ...o, status: 'SELESAI' as const } : o
     );
     saveOrdersState(updated);
+
+    // Auto-bridge: catat kas masuk di Buku Kas (kecuali POS, sudah ada bridge sendiri)
+    if (targetOrder && targetOrder.order_source !== 'POS') {
+      try {
+        const cashList: Array<{
+          id: string;
+          type: 'IN' | 'OUT';
+          amount: number;
+          category: string;
+          description: string;
+          time: string;
+          linked_order_id?: string;
+        }> = JSON.parse(localStorage.getItem('lah_gabin_cash_transactions') || '[]');
+        const alreadyLinked = cashList.some(
+          (c) => c.linked_order_id === targetOrder.id
+        );
+        if (!alreadyLinked) {
+          cashList.unshift({
+            id: crypto.randomUUID(),
+            type: 'IN',
+            amount: Number(targetOrder.final_amount) || 0,
+            category: 'PENJUALAN_ONLINE',
+            description: `Penjualan Online ${targetOrder.invoice_code}${targetOrder.customer_name ? ` - ${targetOrder.customer_name}` : ''}`,
+            time: new Date().toISOString().replace('T', ' ').slice(0, 16),
+            linked_order_id: targetOrder.id,
+          });
+          localStorage.setItem('lah_gabin_cash_transactions', JSON.stringify(cashList));
+        }
+      } catch {}
+    }
 
     if (isSupabaseConfigured()) {
       try {

@@ -20,6 +20,7 @@ interface Product {
   id: string;
   name: string;
   stock_quantity: number;
+  status?: string;
 }
 
 const TYPE_OPTIONS = [
@@ -220,11 +221,9 @@ export default function AdminStockPage() {
           const parsed = JSON.parse(localProd);
           const newList = parsed.map((p: Product) => {
             if (p.id !== productId) return p;
-            return {
-              ...p,
-              stock_quantity: after,
-              status: newStatus ?? p.status,
-            };
+            return newStatus !== undefined
+              ? { ...p, stock_quantity: after, status: newStatus as Product['status'] }
+              : { ...p, stock_quantity: after };
           });
           localStorage.setItem('lah_gabin_admin_products', JSON.stringify(newList));
         }

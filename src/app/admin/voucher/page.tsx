@@ -6,9 +6,9 @@ import { formatRupiah } from '@/lib/utils';
 import type { Voucher } from '@/types';
 
 const MOCK_VOUCHERS: Voucher[] = [
-  { id: '1', code: 'PROMOHEMAT', discount_type: 'FIXED', discount_value: 5000, min_order_amount: 25000, max_discount_amount: null, quota_total: 50, quota_used: 12, start_date: '2026-09-01', end_date: '2026-09-30', is_active: true },
-  { id: '2', code: 'GABINSERU', discount_type: 'PERCENTAGE', discount_value: 10, min_order_amount: 30000, max_discount_amount: 10000, quota_total: 100, quota_used: 45, start_date: '2026-09-01', end_date: '2026-09-15', is_active: true },
-  { id: '3', code: 'EXPIRED10', discount_type: 'PERCENTAGE', discount_value: 10, min_order_amount: 20000, max_discount_amount: 5000, quota_total: 20, quota_used: 20, start_date: '2026-08-01', end_date: '2026-08-31', is_active: false },
+  { id: '1', code: 'PROMOHEMAT', discount_type: 'FIXED', discount_value: 5000, min_order_amount: 25000, max_discount_amount: null, quota: 50, used_count: 12, start_date: '2026-09-01', end_date: '2026-09-30', is_active: true, created_at: '2026-09-01T00:00:00Z' },
+  { id: '2', code: 'GABINSERU', discount_type: 'PERCENTAGE', discount_value: 10, min_order_amount: 30000, max_discount_amount: 10000, quota: 100, used_count: 45, start_date: '2026-09-01', end_date: '2026-09-15', is_active: true, created_at: '2026-09-01T00:00:00Z' },
+  { id: '3', code: 'EXPIRED10', discount_type: 'PERCENTAGE', discount_value: 10, min_order_amount: 20000, max_discount_amount: 5000, quota: 20, used_count: 20, start_date: '2026-08-01', end_date: '2026-08-31', is_active: false, created_at: '2026-08-01T00:00:00Z' },
 ];
 
 const STORAGE_KEY = 'lah_gabin_vouchers';
@@ -98,12 +98,12 @@ export default function AdminVoucherPage() {
             <div className="border-t border-neutral-100 dark:border-neutral-800 pt-3 space-y-1.5 text-xs text-neutral-500 dark:text-neutral-400">
               <div className="flex justify-between">
                 <span>Kuota Terpakai:</span>
-                <span className="font-bold text-neutral-800 dark:text-neutral-200">{v.quota_used} / {v.quota_total}</span>
+                <span className="font-bold text-neutral-800 dark:text-neutral-200">{v.used_count} / {v.quota}</span>
               </div>
               <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-1.5 overflow-hidden">
                 <div
                   className="bg-accent-500 h-full rounded-full"
-                  style={{ width: `${(v.quota_used / v.quota_total) * 100}%` }}
+                  style={{ width: `${v.quota > 0 ? (v.used_count / v.quota) * 100 : 0}%` }}
                 />
               </div>
               <p className="text-[11px] text-neutral-400 pt-1">

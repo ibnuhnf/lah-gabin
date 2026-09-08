@@ -74,6 +74,7 @@ describe('buildWhatsAppURL', () => {
         price_snapshot: 15000,
         quantity: 2,
         subtotal: 30000,
+        created_at: '2026-09-02T10:00:00Z',
       },
     ],
   };
@@ -112,7 +113,7 @@ describe('buildWhatsAppURL', () => {
   });
 
   it('omits notes line when no notes', () => {
-    const noNotesOrder = { ...mockOrder, customer_notes: undefined };
+    const noNotesOrder = { ...mockOrder, customer_notes: null };
     const url = buildWhatsAppURL(noNotesOrder, '6282121498255');
     const decoded = decodeURIComponent(url.split('text=')[1]);
     expect(decoded).not.toContain('Catatan');

@@ -26,7 +26,7 @@ if (hasValidConfig) {
 }
 
 // Chainable dummy query builder for build-time safety & graceful fallback
-const createDummyQuery = () => {
+const createDummyQuery = (): any => {
   const dummyResult = Promise.resolve({ data: null, error: null, count: 0 });
   const builder: any = () => builder;
   return new Proxy(builder, {

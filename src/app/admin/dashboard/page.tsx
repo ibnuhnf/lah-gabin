@@ -145,7 +145,13 @@ export default function AdminDashboardPage() {
   const totalCashOut = cashTransactions.filter((t) => t.type === 'OUT').reduce((s, t) => s + t.amount, 0);
   const saldoKas = totalCashIn - totalCashOut;
 
-  const totalPengeluaran = periodOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
+  // Pengeluaran = total kas OUT (sama dengan Buku Kas) yang masuk dalam periode ini
+  const isCashInPeriod = (dateStr: string) =>
+    period === 'today' ? isToday(dateStr) : isThisMonth(dateStr);
+  const totalPengeluaran = cashTransactions
+    .filter((t) => t.type === 'OUT')
+    .filter((t) => isCashInPeriod(t.time))
+    .reduce((s, t) => s + (t.amount || 0), 0);
 
   const activeQueue = orders.filter(
     (o) => o.status === 'PENDING_APPROVAL' || o.status === 'DITERIMA_PROSES' || o.status === 'DIPROSES'
