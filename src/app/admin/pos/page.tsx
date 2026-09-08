@@ -1,23 +1,62 @@
 'use client';
 
-import { useState } from 'react';
-import { Minus, Plus, Trash2, ShoppingBag, Check } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Minus, Plus, Trash2, ShoppingBag, Check, Loader2 } from 'lucide-react';
 import { formatRupiah, getActivePrice } from '@/lib/utils';
-
-const MOCK_PRODUCTS = [
-  { id: '1', name: 'Es Gabin Coklat', base_price: 5000, discount_price: null, discount_start_date: null, discount_end_date: null, stock_quantity: 25, status: 'active' as const, hpp_per_pcs: 775, unit: 'pcs' },
-  { id: '2', name: 'Es Gabin Keju', base_price: 5500, discount_price: null, discount_start_date: null, discount_end_date: null, stock_quantity: 20, status: 'active' as const, hpp_per_pcs: 800, unit: 'pcs' },
-  { id: '3', name: 'Es Gabin Susu', base_price: 5000, discount_price: null, discount_start_date: null, discount_end_date: null, stock_quantity: 30, status: 'active' as const, hpp_per_pcs: 720, unit: 'pcs' },
-  { id: '5', name: 'Es Gabin Matcha', base_price: 6500, discount_price: null, discount_start_date: null, discount_end_date: null, stock_quantity: 15, status: 'active' as const, hpp_per_pcs: 1200, unit: 'pcs' },
-  { id: '6', name: 'Es Gabin Strawberry', base_price: 6000, discount_price: null, discount_start_date: null, discount_end_date: null, stock_quantity: 18, status: 'active' as const, hpp_per_pcs: 900, unit: 'pcs' },
-  { id: '8', name: 'Es Gabin Original', base_price: 4000, discount_price: null, discount_start_date: null, discount_end_date: null, stock_quantity: 40, status: 'active' as const, hpp_per_pcs: 600, unit: 'pcs' },
-];
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import type { Product } from '@/types';
 
 type CartItem = { productId: string; name: string; price: number; quantity: number };
 type PaymentMethod = 'CASH' | 'TRANSFER' | 'QRIS';
 
 export default function AdminPOSPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState<CartItem[]>([]);
+
+  useEffect(() => {
+    function loadFromLocal() {
+      try {
+        const local = localStorage.getItem('lah_gabin_admin_products');
+        if (local) {
+          setProducts(JSON.parse(local));
+          setLoading(false);
+        }
+      } catch {}
+    }
+
+    loadFromLocal();
+
+    async function loadFromDB() {
+      if (isSupabaseConfigured()) {
+        try {
+          const { data } = await supabase.from('products').select('*');
+          if (data && data.length > 0) {
+            setProducts(data);
+            try { localStorage.setItem('lah_gabin_admin_products', JSON.stringify(data)); } catch {}
+          }
+        } catch {}
+      }
+      setLoading(false);
+    }
+
+    loadFromDB();
+
+    const onFocus = () => { loadFromLocal(); loadFromDB(); };
+    window.addEventListener('focus', onFocus);
+
+    function syncFromStorage(e: StorageEvent) {
+      if (e.key === 'lah_gabin_admin_products' && e.newValue) {
+        try { setProducts(JSON.parse(e.newValue)); } catch {}
+      }
+    }
+    window.addEventListener('storage', syncFromStorage);
+
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('storage', syncFromStorage);
+    };
+  }, []);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
   const [discountNominal, setDiscountNominal] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -27,7 +66,7 @@ export default function AdminPOSPage() {
   const discount = Math.min(Number(discountNominal) || 0, subtotal);
   const total = Math.max(0, subtotal - discount);
 
-  const addToCart = (product: typeof MOCK_PRODUCTS[number]) => {
+  const addToCart = (product: Product) => {
     const { price } = getActivePrice(product.base_price, product.discount_price, product.discount_start_date, product.discount_end_date);
     setCart((prev) => {
       const existing = prev.find((i) => i.productId === product.id);
@@ -57,8 +96,15 @@ export default function AdminPOSPage() {
         <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-neutral-900 dark:text-white tracking-tight mb-4 flex items-center gap-2.5">
           <ShoppingBag size={24} className="text-accent-500" /> POS / Kasir Kas
         </h1>
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 size={24} className="animate-spin text-neutral-400" />
+          </div>
+        ) : products.filter((p) => p.status !== 'inactive').length === 0 ? (
+          <div className="text-center py-20 text-sm text-neutral-400">Belum ada produk terdaftar. Tambahkan produk di menu Produk &amp; Foto.</div>
+        ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {MOCK_PRODUCTS.filter((p) => p.stock_quantity > 0).map((product) => {
+          {products.filter((p) => p.status !== 'inactive').map((product) => {
             const { price } = getActivePrice(product.base_price, product.discount_price, product.discount_start_date, product.discount_end_date);
             const inCart = cart.find((i) => i.productId === product.id);
             return (
@@ -83,6 +129,7 @@ export default function AdminPOSPage() {
             );
           })}
         </div>
+        )}
       </div>
 
       {/* Cart & Checkout */}
