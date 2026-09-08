@@ -6,6 +6,9 @@ import { formatRupiah, getActivePrice } from '@/lib/utils';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import type { Product } from '@/types';
 
+import { createOrder } from '@/lib/orderStore';
+import { createCashTransaction } from '@/lib/cashbookStore';
+
 type CartItem = { productId: string; name: string; price: number; quantity: number };
 type PaymentMethod = 'CASH' | 'TRANSFER' | 'QRIS';
 
@@ -90,7 +93,6 @@ export default function AdminPOSPage() {
       const createdAt = new Date().toISOString();
 
       const orderItems = cart.map((ci) => {
-        const product = products.find((p) => p.id === ci.productId);
         return {
           id: crypto.randomUUID(),
           order_id: orderId,
@@ -103,11 +105,11 @@ export default function AdminPOSPage() {
         };
       });
 
-      const fullOrder = {
+      const orderData = {
         id: orderId,
         invoice_code: invoiceCode,
         customer_name: customerName.trim() || 'Walk-in POS',
-        customer_wa: null,
+        customer_wa: '-',
         customer_notes: null,
         customer_address: 'POS (langsung di kasir)',
         delivery_zone: 'POS',
@@ -120,87 +122,60 @@ export default function AdminPOSPage() {
         voucher_id: null,
         order_source: 'POS' as const,
         created_at: createdAt,
-        items: orderItems,
-        order_items: orderItems,
       };
 
-      // 1) Save order ke localStorage
+      // 1) Simpan Order ke Supabase & Local Cache via central store
+      await createOrder(orderData, orderItems);
+
+      // 2) Simpan Transaksi Kas ke Supabase & Local Cache
+      await createCashTransaction({
+        type: 'IN',
+        amount: total,
+        category: 'PENJUALAN_POS',
+        description: `Penjualan POS ${invoiceCode}${customerName.trim() ? ` - ${customerName.trim()}` : ''}`,
+      });
+
+      // 3) Potong Stok & Buat Mutasi Stok di Supabase + Local Cache
+      const savedProducts = products.map((p) => {
+        const cartItem = cart.find((c) => c.productId === p.id);
+        if (cartItem) {
+          const newQty = Math.max(0, (p.stock_quantity || 0) - cartItem.quantity);
+          return { ...p, stock_quantity: newQty };
+        }
+        return p;
+      });
+      setProducts(savedProducts);
       try {
-        const existing = JSON.parse(localStorage.getItem('lah_gabin_admin_orders') || '[]');
-        localStorage.setItem('lah_gabin_admin_orders', JSON.stringify([fullOrder, ...existing]));
-        localStorage.setItem(`lah_gabin_order_${invoiceCode}`, JSON.stringify(fullOrder));
+        localStorage.setItem('lah_gabin_admin_products', JSON.stringify(savedProducts));
       } catch {}
 
-      // 2) Catat kas IN
-      try {
-        const existingCash = JSON.parse(localStorage.getItem('lah_gabin_cash_transactions') || '[]');
-        const cashTx = {
-          id: crypto.randomUUID(),
-          type: 'IN' as const,
-          amount: total,
-          category: 'PENJUALAN_POS',
-          description: `Penjualan POS ${invoiceCode}${customerName.trim() ? ` - ${customerName.trim()}` : ''}`,
-          time: new Date().toISOString().replace('T', ' ').slice(0, 16),
-        };
-        localStorage.setItem('lah_gabin_cash_transactions', JSON.stringify([cashTx, ...existingCash]));
-      } catch {}
-
-      // 3) Kurangi stok produk di localStorage
-      try {
-        const savedProducts = JSON.parse(localStorage.getItem('lah_gabin_admin_products') || '[]');
-        const updatedProducts = savedProducts.map((p: Product) => {
-          const cartItem = cart.find((c) => c.productId === p.id);
-          if (cartItem) {
-            return { ...p, stock_quantity: Math.max(0, (p.stock_quantity || 0) - cartItem.quantity) };
-          }
-          return p;
-        });
-        localStorage.setItem('lah_gabin_admin_products', JSON.stringify(updatedProducts));
-        setProducts(updatedProducts);
-      } catch {}
-
-      // 4) Sync ke Supabase jika configured (graceful fallback)
       if (isSupabaseConfigured()) {
-        try {
-          const orderData = {
-            id: orderId,
-            invoice_code: invoiceCode,
-            customer_name: fullOrder.customer_name,
-            customer_wa: null,
-            customer_notes: null,
-            customer_address: fullOrder.customer_address,
-            delivery_zone: 'POS',
-            delivery_fee: 0,
-            total_amount: subtotal,
-            discount_amount: discount,
-            final_amount: total,
-            payment_method: paymentMethod,
-            status: 'SELESAI',
-            voucher_id: null,
-            order_source: 'POS',
-            created_at: createdAt,
-          };
-          const { data: dbOrder, error: orderError } = await supabase
-            .from('orders')
-            .insert([orderData])
-            .select()
-            .maybeSingle();
-          if (!orderError && dbOrder) {
-            await supabase.from('order_items').insert(orderItems);
-          }
-
-          // Update stok di Supabase juga
-          for (const ci of cart) {
-            const prod = products.find((p) => p.id === ci.productId);
-            if (prod) {
+        for (const ci of cart) {
+          const prod = products.find((p) => p.id === ci.productId);
+          if (prod) {
+            const before = prod.stock_quantity || 0;
+            const after = Math.max(0, before - ci.quantity);
+            try {
               await supabase
                 .from('products')
-                .update({ stock_quantity: Math.max(0, (prod.stock_quantity || 0) - ci.quantity) })
+                .update({ stock_quantity: after, updated_at: new Date().toISOString() })
                 .eq('id', ci.productId);
+
+              await supabase.from('stock_mutations').insert([{
+                id: crypto.randomUUID(),
+                product_id: ci.productId,
+                mutation_type: 'KELUAR_PENJUALAN',
+                quantity_change: -ci.quantity,
+                stock_before: before,
+                stock_after: after,
+                reference_id: orderId,
+                notes: `POS Checkout ${invoiceCode}`,
+                created_at: createdAt,
+              }]);
+            } catch (e) {
+              console.warn('Error updating stock/mutation for POS in Supabase:', e);
             }
           }
-        } catch (err) {
-          console.warn('Supabase POS sync fallback:', err);
         }
       }
 

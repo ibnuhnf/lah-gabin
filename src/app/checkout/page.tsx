@@ -11,6 +11,7 @@ import { formatRupiah } from '@/lib/utils';
 import { validateVoucher, consumeVoucherQuota, generateInvoiceCode } from '@/lib/orders';
 import { normalizeIndonesianPhone, isValidIndonesianPhone } from '@/lib/whatsapp';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { createOrder } from '@/lib/orderStore';
 import type { Voucher, BarVariant } from '@/types';
 import { BAR_VARIANT_LABELS } from '@/types';
 
@@ -143,32 +144,8 @@ export default function CheckoutPage() {
           }));
         });
 
-        try {
-          const fullOrder = { ...orderData, items: orderItemsData, order_items: orderItemsData };
-          localStorage.setItem(`lah_gabin_order_${invoiceCode}`, JSON.stringify(fullOrder));
-
-          const existingAdminOrders = JSON.parse(localStorage.getItem('lah_gabin_admin_orders') || '[]');
-          localStorage.setItem(
-            'lah_gabin_admin_orders',
-            JSON.stringify([fullOrder, ...existingAdminOrders])
-          );
-        } catch {}
-
-        if (isSupabaseConfigured()) {
-          try {
-            const { data: dbOrder, error: orderError } = await supabase
-              .from('orders')
-              .insert([orderData])
-              .select()
-              .maybeSingle();
-
-            if (!orderError && dbOrder) {
-              await supabase.from('order_items').insert(orderItemsData);
-            }
-          } catch (err) {
-            console.warn('Supabase order insert fallback to local:', err);
-          }
-        }
+        // Simpan ke Supabase Cloud (dengan fallback local) via central store
+        await createOrder(orderData, orderItemsData);
 
         if (appliedVoucher) {
           try {

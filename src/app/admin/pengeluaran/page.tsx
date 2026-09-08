@@ -17,15 +17,11 @@ import {
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { formatRupiah } from '@/lib/utils';
+import { fetchAllExpenses, createExpense, deleteExpensePermanently as deleteExpenseCloud } from '@/lib/expenseStore';
+import { createCashTransaction, deleteCashTransactionPermanently } from '@/lib/cashbookStore';
+import type { Expense } from '@/types';
 
-export interface ExpenseItem {
-  id: string;
-  date: string; // YYYY-MM-DD
-  category: string;
-  amount: number;
-  description: string;
-  created_at?: string;
-}
+export type ExpenseItem = Expense;
 
 const CATEGORIES = [
   'Bahan Baku',
@@ -37,7 +33,7 @@ const CATEGORIES = [
   'Lain-lain',
 ];
 
-const INITIAL_EXPENSES: ExpenseItem[] = [
+const INITIAL_EXPENSES: Expense[] = [
   { id: '1', date: '2026-09-01', category: 'Bahan Baku', amount: 350000, description: 'Beli biskuit gabin, susu, keju (mingguan)' },
   { id: '2', date: '2026-09-01', category: 'Kemasan / Packaging', amount: 85000, description: 'Plastik klip 500 pcs + stiker label' },
   { id: '3', date: '2026-08-30', category: 'Operasional (Gas / Listrik / Air)', amount: 250000, description: 'Token listrik freezer + isi gas' },
@@ -48,9 +44,9 @@ const INITIAL_EXPENSES: ExpenseItem[] = [
 const STORAGE_KEY = 'lah_gabin_admin_expenses';
 
 export default function AdminExpensesPage() {
-  const [expenses, setExpenses] = useState<ExpenseItem[]>(INITIAL_EXPENSES);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [editItem, setEditItem] = useState<ExpenseItem | null>(null);
+  const [editItem, setEditItem] = useState<Expense | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
@@ -65,112 +61,25 @@ export default function AdminExpensesPage() {
     description: '',
   });
 
-  // Load from Supabase + localStorage
+  const loadExpenses = async () => {
+    const list = await fetchAllExpenses();
+    setExpenses(list);
+  };
+
   useEffect(() => {
-    async function loadExpenses() {
-      let remoteData: ExpenseItem[] = [];
-      if (isSupabaseConfigured()) {
-        try {
-          const { data, error } = await supabase
-            .from('expenses')
-            .select('*')
-            .order('expense_date', { ascending: false });
-
-          if (!error && data && data.length > 0) {
-            remoteData = data.map((d: Record<string, unknown>) => ({
-              id: String(d.id),
-              date: String(d.expense_date || d.created_at || '').slice(0, 10),
-              category: String(d.category || CATEGORIES[0]),
-              amount: Number(d.amount) || 0,
-              description: String(d.description || '-'),
-              created_at: String(d.created_at || ''),
-            }));
-          }
-        } catch (err) {
-          console.warn('Gagal load expenses dari Supabase:', err);
-        }
-      }
-
-      let localData: ExpenseItem[] = [];
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          localData = JSON.parse(saved);
-        } else if (remoteData.length === 0) {
-          localData = INITIAL_EXPENSES;
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_EXPENSES));
-        }
-      } catch {}
-
-      // Merge and dedupe
-      const seen = new Set(remoteData.map((e) => e.id));
-      const merged = [...remoteData];
-      for (const loc of localData) {
-        if (!seen.has(loc.id)) {
-          merged.push(loc);
-        }
-      }
-      merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      setExpenses(merged);
-
-      // Backfill: pastikan semua expense yang ada tercatat di Buku Kas (jika belum ada)
-      try {
-        const cashList: Array<{
-          id: string;
-          type: 'IN' | 'OUT';
-          amount: number;
-          category: string;
-          description: string;
-          time: string;
-          linked_expense_id?: string;
-        }> = JSON.parse(localStorage.getItem('lah_gabin_cash_transactions') || '[]');
-
-        const existingLinkedIds = new Set(
-          cashList.filter((c) => c.linked_expense_id).map((c) => c.linked_expense_id)
-        );
-
-        const categoryMap: Record<string, string> = {
-          'Bahan Baku': 'BAHAN_BAKU',
-          'Kemasan / Packaging': 'KEMASAN',
-          'Operasional (Gas / Listrik / Air)': 'OPERASIONAL',
-          'Transportasi / Logistik': 'OPERASIONAL',
-          'Marketing / Iklan': 'LAINNYA',
-          'Gaji / Upah': 'LAINNYA',
-          'Lain-lain': 'LAINNYA',
-        };
-
-        let added = false;
-        for (const exp of merged) {
-          if (!existingLinkedIds.has(exp.id)) {
-            cashList.push({
-              id: crypto.randomUUID(),
-              type: 'OUT',
-              amount: exp.amount,
-              category: categoryMap[exp.category] || 'LAINNYA',
-              description: `${exp.category}: ${exp.description}`,
-              time: `${exp.date} 00:00`,
-              linked_expense_id: exp.id,
-            });
-            added = true;
-          }
-        }
-        if (added) {
-          localStorage.setItem('lah_gabin_cash_transactions', JSON.stringify(cashList));
-        }
-      } catch {}
-    }
-
     loadExpenses();
 
-    function onStorage(e: StorageEvent) {
-      if (e.key === STORAGE_KEY && e.newValue) {
-        try {
-          setExpenses(JSON.parse(e.newValue));
-        } catch {}
-      }
-    }
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    const interval = setInterval(() => {
+      loadExpenses();
+    }, 6000);
+
+    const onFocus = () => loadExpenses();
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
 
   const showNotify = (msg: string) => {
@@ -256,7 +165,7 @@ export default function AdminExpensesPage() {
   const handleOpenEdit = (item: ExpenseItem) => {
     setEditItem(item);
     setForm({
-      date: item.date,
+      date: item.date || item.expense_date || new Date().toISOString().slice(0, 10),
       category: item.category,
       amount: String(item.amount),
       description: item.description,
@@ -318,34 +227,22 @@ export default function AdminExpensesPage() {
       showNotify('Pengeluaran berhasil diperbarui.');
     } else {
       // Create new
-      const newId = crypto.randomUUID();
-      const newItem: ExpenseItem = {
-        id: newId,
+      await createExpense({
         date: form.date,
         category: form.category,
         amount: numAmount,
         description: form.description.trim(),
-        created_at: now,
-      };
+      });
 
-      const updatedList = [newItem, ...expenses];
-      persistExpenses(updatedList);
+      // Sync ke Buku Kas Supabase: auto-create OUT transaction
+      await createCashTransaction({
+        type: 'OUT',
+        amount: numAmount,
+        category: form.category,
+        description: `Beban ${form.category}: ${form.description.trim()}`,
+      });
 
-      if (isSupabaseConfigured()) {
-        try {
-          await supabase.from('expenses').insert({
-            id: newId,
-            expense_date: form.date,
-            amount: numAmount,
-            description: form.description.trim(),
-            created_at: now,
-          });
-        } catch {}
-      }
-
-      // Sync ke Buku Kas: auto-create OUT transaction
-      syncCashTransaction('create', newItem);
-
+      await loadExpenses();
       showNotify('Pengeluaran baru berhasil dicatat.');
     }
 
@@ -353,25 +250,8 @@ export default function AdminExpensesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    // Cari item dulu untuk sync sebelum dihapus
-    const deletedItem = expenses.find((e) => e.id === id);
-    const updatedList = expenses.filter((e) => e.id !== id);
-    persistExpenses(updatedList);
-
-    // Sync ke Buku Kas: hapus OUT transaction terkait
-    if (deletedItem) {
-      syncCashTransaction('delete', deletedItem);
-    }
-
-    if (isSupabaseConfigured()) {
-      try {
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-        if (isUuid) {
-          await supabase.from('expenses').delete().eq('id', id);
-        }
-      } catch {}
-    }
-
+    await deleteExpenseCloud(id);
+    await loadExpenses();
     setDeleteId(null);
     showNotify('Pengeluaran telah dihapus.');
   };
@@ -379,7 +259,8 @@ export default function AdminExpensesPage() {
   // Filtered List
   const filteredExpenses = useMemo(() => {
     return expenses.filter((item) => {
-      const matchMonth = !monthFilter || item.date.startsWith(monthFilter);
+      const expDate = item.date || item.expense_date || '';
+      const matchMonth = !monthFilter || expDate.startsWith(monthFilter);
       const matchCat = categoryFilter === 'ALL' || item.category === categoryFilter;
       const matchQuery =
         !searchQuery ||

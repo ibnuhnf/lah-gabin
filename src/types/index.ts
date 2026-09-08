@@ -47,9 +47,10 @@ export interface Expense {
   category: string;
   amount: number;
   description: string;
-  expense_date: string;
-  created_by: string;
-  created_at: string;
+  expense_date?: string;
+  date?: string;
+  created_by?: string;
+  created_at?: string;
 }
 
 export interface Voucher {
@@ -86,7 +87,7 @@ export interface OrderItem {
   price_snapshot: number;
   quantity: number;
   subtotal: number;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface Order {
@@ -107,6 +108,8 @@ export interface Order {
   voucher_id?: string | null;
   order_source: OrderSource;
   rejection_reason?: string | null;
+  cancelled_reason?: string | null;
+  cancellation_reason?: string | null;
   created_at: string;
   updated_at?: string;
   items?: OrderItem[];

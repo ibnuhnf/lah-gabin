@@ -21,6 +21,9 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { formatRupiah } from '@/lib/utils';
 import type { Order, Product } from '@/types';
 
+import { fetchAllOrders } from '@/lib/orderStore';
+import { fetchAllCashTransactions } from '@/lib/cashbookStore';
+
 const INITIAL_CRITICAL_STOCK = [
   { name: 'Es Gabin Tiramisu', stock: 0, min: 5, unit: 'pcs' },
   { name: 'Es Gabin Oreo', stock: 0, min: 5, unit: 'pcs' },
@@ -41,80 +44,43 @@ export default function AdminDashboardPage() {
     { id: string; type: 'IN' | 'OUT'; amount: number; time: string }[]
   >([]);
 
-  useEffect(() => {
+  const loadData = async () => {
     try {
-      const savedOrders = localStorage.getItem('lah_gabin_admin_orders');
-      if (savedOrders) setOrders(JSON.parse(savedOrders));
-    } catch {}
+      const [allOrders, allCash] = await Promise.all([
+        fetchAllOrders(),
+        fetchAllCashTransactions(),
+      ]);
+      setOrders(allOrders);
+      setCashTransactions(allCash);
 
-    try {
-      const savedProducts = localStorage.getItem('lah_gabin_admin_products');
-      if (savedProducts) setProducts(JSON.parse(savedProducts));
-    } catch {}
-
-    try {
-      const savedCash = localStorage.getItem('lah_gabin_cash_transactions');
-      if (savedCash) setCashTransactions(JSON.parse(savedCash));
-    } catch {}
-
-    async function loadData() {
       if (isSupabaseConfigured()) {
-        try {
-          const { data: dbOrders } = await supabase
-            .from('orders')
-            .select('*, order_items(*)')
-            .order('created_at', { ascending: false });
-          if (dbOrders && dbOrders.length > 0) {
-            const formatted = dbOrders.map((o) => ({
-              ...o,
-              items: o.order_items || o.items || [],
-            }));
-            setOrders(formatted);
-          }
-          const { data: dbProducts } = await supabase.from('products').select('*');
-          if (dbProducts && dbProducts.length > 0) setProducts(dbProducts);
-        } catch (err) {
-          console.warn('Dashboard sync fallback to local:', err);
+        const { data: dbProducts } = await supabase.from('products').select('*');
+        if (dbProducts && dbProducts.length > 0) {
+          setProducts(dbProducts);
         }
-      }
-    }
-
-    loadData();
-
-    function syncFromStorage(e: StorageEvent) {
-      if (e.key === 'lah_gabin_admin_orders' && e.newValue) {
-        try {
-          setOrders(JSON.parse(e.newValue));
-        } catch {}
-      }
-      if (e.key === 'lah_gabin_cash_transactions' && e.newValue) {
-        try {
-          setCashTransactions(JSON.parse(e.newValue));
-        } catch {}
-      }
-      if (e.key === 'lah_gabin_admin_products' && e.newValue) {
-        try {
-          setProducts(JSON.parse(e.newValue));
-        } catch {}
-      }
-    }
-
-    const onFocus = () => {
-      try {
+      } else {
         const savedProducts = localStorage.getItem('lah_gabin_admin_products');
         if (savedProducts) setProducts(JSON.parse(savedProducts));
-        const savedOrders = localStorage.getItem('lah_gabin_admin_orders');
-        if (savedOrders) setOrders(JSON.parse(savedOrders));
-        const savedCash = localStorage.getItem('lah_gabin_cash_transactions');
-        if (savedCash) setCashTransactions(JSON.parse(savedCash));
-      } catch {}
+      }
+    } catch (err) {
+      console.warn('Dashboard data fetch error:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+
+    const interval = setInterval(() => {
+      loadData();
+    }, 6000);
+
+    const onFocus = () => {
       loadData();
     };
 
-    window.addEventListener('storage', syncFromStorage);
     window.addEventListener('focus', onFocus);
     return () => {
-      window.removeEventListener('storage', syncFromStorage);
+      clearInterval(interval);
       window.removeEventListener('focus', onFocus);
     };
   }, []);

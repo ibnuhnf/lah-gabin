@@ -5,27 +5,7 @@ import { Check, X, ChevronRight, MessageCircle, Clock, CheckCircle2, XCircle, Ma
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { formatRupiah } from '@/lib/utils';
 
-interface OrderItem {
-  product_name: string;
-  quantity: number;
-  subtotal: number;
-}
-
-interface Order {
-  id: string;
-  invoice_code: string;
-  customer_name: string;
-  customer_wa: string;
-  customer_address?: string | null;
-  customer_notes?: string | null;
-  final_amount: number;
-  discount_amount?: number;
-  status: 'PENDING_APPROVAL' | 'DITERIMA_PROSES' | 'DIPROSES' | 'SELESAI' | 'DIBATALKAN';
-  cancellation_reason?: string;
-  order_source?: string;
-  items: OrderItem[];
-  created_at: string;
-}
+import type { Order } from '@/types';
 
 // Reset: daftar pesanan riwayat kosong
 const FALLBACK_ORDERS: Order[] = [];
@@ -38,6 +18,9 @@ const STATUS_BADGE: Record<string, string> = {
   DIBATALKAN: 'badge-dibatalkan',
 };
 
+import { fetchAllOrders, updateOrderStatus, deleteOrderPermanently } from '@/lib/orderStore';
+import { createCashTransaction } from '@/lib/cashbookStore';
+
 const STATUS_LABEL: Record<string, string> = {
   PENDING_APPROVAL: 'Menunggu Konfirmasi',
   DITERIMA_PROSES: 'Diproses',
@@ -47,7 +30,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<Order[]>(FALLBACK_ORDERS);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [cancelModal, setCancelModal] = useState<{ id: string; name: string } | null>(null);
   const [cancelReason, setCancelReason] = useState('');
@@ -55,49 +38,24 @@ export default function AdminOrdersPage() {
   const [notification, setNotification] = useState<string | null>(null);
 
   const fetchOrders = async () => {
-    try {
-      const local = localStorage.getItem('lah_gabin_admin_orders');
-      if (local && orders.length === 0) {
-        setOrders(JSON.parse(local));
-      }
-    } catch {}
-
-    if (isSupabaseConfigured()) {
-      try {
-        const { data, error } = await supabase
-          .from('orders')
-          .select('*, order_items(*)')
-          .order('created_at', { ascending: false });
-        if (!error && data && data.length > 0) {
-          const formatted = data.map((d) => ({
-            ...d,
-            items: d.order_items || d.items || [],
-          }));
-          setOrders(formatted);
-          try {
-            localStorage.setItem('lah_gabin_admin_orders', JSON.stringify(formatted));
-          } catch {}
-        }
-      } catch (err) {
-        console.warn('Error fetching orders from Supabase:', err);
-      }
-    }
+    const list = await fetchAllOrders();
+    setOrders(list);
   };
 
   useEffect(() => {
     fetchOrders();
 
-    // 1. Polling setiap 6 detik untuk mendeteksi order baru dari device lain (HP customer)
+    // 1. Polling setiap 5 detik untuk mendeteksi order baru dari device lain (HP customer)
     const interval = setInterval(() => {
       fetchOrders();
-    }, 6000);
+    }, 5000);
 
     // 2. Real-time Supabase postgres_changes channel
     let channel: any = null;
     if (isSupabaseConfigured()) {
       try {
         channel = supabase
-          .channel('realtime_orders_admin')
+          .channel('realtime_orders_admin_sync')
           .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'orders' },
@@ -119,76 +77,30 @@ export default function AdminOrdersPage() {
     };
   }, []);
 
-  const saveOrdersState = (newList: Order[]) => {
-    setOrders(newList);
-    try {
-      localStorage.setItem('lah_gabin_admin_orders', JSON.stringify(newList));
-      // Also update individual order key so customer track page updates instantly
-      newList.forEach((ord) => {
-        if (ord.invoice_code) {
-          localStorage.setItem(`lah_gabin_order_${ord.invoice_code}`, JSON.stringify(ord));
-        }
-      });
-    } catch {}
-  };
-
   const approveOrder = async (id: string) => {
-    const updated = orders.map((o) =>
-      o.id === id ? { ...o, status: 'DITERIMA_PROSES' as const } : o
-    );
-    saveOrdersState(updated);
-
-    if (isSupabaseConfigured()) {
-      try {
-        await supabase.from('orders').update({ status: 'DITERIMA_PROSES' }).eq('id', id);
-      } catch {}
-    }
+    await updateOrderStatus(id, 'DITERIMA_PROSES');
+    await fetchOrders();
     setNotification('Pesanan berhasil diterima dan diproses!');
     setTimeout(() => setNotification(null), 3000);
   };
 
   const markCompleted = async (id: string) => {
     const targetOrder = orders.find((o) => o.id === id);
-    const updated = orders.map((o) =>
-      o.id === id ? { ...o, status: 'SELESAI' as const } : o
-    );
-    saveOrdersState(updated);
+    await updateOrderStatus(id, 'SELESAI');
 
-    // Auto-bridge: catat kas masuk di Buku Kas (kecuali POS, sudah ada bridge sendiri)
+    // Auto-bridge: catat kas masuk di Buku Kas Supabase (kecuali POS)
     if (targetOrder && targetOrder.order_source !== 'POS') {
       try {
-        const cashList: Array<{
-          id: string;
-          type: 'IN' | 'OUT';
-          amount: number;
-          category: string;
-          description: string;
-          time: string;
-          linked_order_id?: string;
-        }> = JSON.parse(localStorage.getItem('lah_gabin_cash_transactions') || '[]');
-        const alreadyLinked = cashList.some(
-          (c) => c.linked_order_id === targetOrder.id
-        );
-        if (!alreadyLinked) {
-          cashList.unshift({
-            id: crypto.randomUUID(),
-            type: 'IN',
-            amount: Number(targetOrder.final_amount) || 0,
-            category: 'PENJUALAN_ONLINE',
-            description: `Penjualan Online ${targetOrder.invoice_code}${targetOrder.customer_name ? ` - ${targetOrder.customer_name}` : ''}`,
-            time: new Date().toISOString().replace('T', ' ').slice(0, 16),
-            linked_order_id: targetOrder.id,
-          });
-          localStorage.setItem('lah_gabin_cash_transactions', JSON.stringify(cashList));
-        }
+        await createCashTransaction({
+          type: 'IN',
+          amount: Number(targetOrder.final_amount) || 0,
+          category: 'PENJUALAN_ONLINE',
+          description: `Penjualan Online ${targetOrder.invoice_code}${targetOrder.customer_name ? ` - ${targetOrder.customer_name}` : ''}`,
+        });
       } catch {}
     }
 
-    if (isSupabaseConfigured()) {
-      try {
-        await supabase.from('orders').update({ status: 'SELESAI' }).eq('id', id);
-      } catch {}
-    }
+    await fetchOrders();
     setNotification('Pesanan ditandai selesai!');
     setTimeout(() => setNotification(null), 3000);
   };
@@ -196,22 +108,8 @@ export default function AdminOrdersPage() {
   const handleConfirmCancel = async () => {
     if (!cancelModal || !cancelReason.trim()) return;
 
-    const updated = orders.map((o) =>
-      o.id === cancelModal.id
-        ? { ...o, status: 'DIBATALKAN' as const, cancellation_reason: cancelReason.trim() }
-        : o
-    );
-    saveOrdersState(updated);
-
-    if (isSupabaseConfigured()) {
-      try {
-        await supabase
-          .from('orders')
-          .update({ status: 'DIBATALKAN', cancellation_reason: cancelReason.trim() })
-          .eq('id', cancelModal.id);
-      } catch {}
-    }
-
+    await updateOrderStatus(cancelModal.id, 'DIBATALKAN', cancelReason.trim());
+    await fetchOrders();
     setCancelModal(null);
     setCancelReason('');
     setNotification('Pesanan berhasil dibatalkan.');
@@ -221,25 +119,8 @@ export default function AdminOrdersPage() {
   const handleConfirmDelete = async () => {
     if (!deleteModal) return;
 
-    const targetId = deleteModal.id;
-    const targetInvoice = deleteModal.invoice;
-    const updated = orders.filter((o) => o.id !== targetId);
-    setOrders(updated);
-
-    try {
-      localStorage.setItem('lah_gabin_admin_orders', JSON.stringify(updated));
-      if (targetInvoice) {
-        localStorage.removeItem(`lah_gabin_order_${targetInvoice}`);
-      }
-    } catch {}
-
-    if (isSupabaseConfigured()) {
-      try {
-        await supabase.from('order_items').delete().eq('order_id', targetId);
-        await supabase.from('orders').delete().eq('id', targetId);
-      } catch {}
-    }
-
+    await deleteOrderPermanently(deleteModal.id, deleteModal.invoice);
+    await fetchOrders();
     setDeleteModal(null);
     setNotification('Pesanan berhasil dihapus.');
     setTimeout(() => setNotification(null), 3000);

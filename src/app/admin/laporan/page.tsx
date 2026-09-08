@@ -19,105 +19,51 @@ import {
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { formatRupiah } from '@/lib/utils';
 import { Order, Product } from '@/types';
-import { ExpenseItem } from '../pengeluaran/page';
-
-const INITIAL_EXPENSES: ExpenseItem[] = [
-  { id: '1', date: '2026-09-01', category: 'Bahan Baku', amount: 350000, description: 'Beli biskuit gabin, susu, keju (mingguan)' },
-  { id: '2', date: '2026-09-01', category: 'Kemasan / Packaging', amount: 85000, description: 'Plastik klip 500 pcs + stiker label' },
-  { id: '3', date: '2026-08-30', category: 'Operasional (Gas / Listrik / Air)', amount: 250000, description: 'Token listrik freezer + isi gas' },
-  { id: '4', date: '2026-08-29', category: 'Transportasi / Logistik', amount: 45000, description: 'Ongkir kirim bahan baku' },
-  { id: '5', date: '2026-08-25', category: 'Marketing / Iklan', amount: 100000, description: 'Boost IG story promo opening 7 hari' },
-];
+import { fetchAllOrders } from '@/lib/orderStore';
+import { fetchAllExpenses } from '@/lib/expenseStore';
+import type { Expense } from '@/types';
 
 export default function AdminReportsPage() {
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [orders, setOrders] = useState<Order[]>([]);
-  const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
 
-  // Load all synchronized data on mount
-  useEffect(() => {
-    // 1. LocalStorage initial load
+  const loadData = async () => {
     try {
-      const savedOrders = localStorage.getItem('lah_gabin_admin_orders');
-      if (savedOrders) setOrders(JSON.parse(savedOrders));
-    } catch {}
+      const [allOrders, allExpenses] = await Promise.all([
+        fetchAllOrders(),
+        fetchAllExpenses(),
+      ]);
+      setOrders(allOrders);
+      setExpenses(allExpenses);
 
-    try {
-      const savedExpenses = localStorage.getItem('lah_gabin_admin_expenses');
-      if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
-      else setExpenses(INITIAL_EXPENSES);
-    } catch {}
-
-    try {
-      const savedProducts = localStorage.getItem('lah_gabin_admin_products');
-      if (savedProducts) setProducts(JSON.parse(savedProducts));
-    } catch {}
-
-    // 2. Supabase remote fetch
-    async function loadData() {
       if (isSupabaseConfigured()) {
-        try {
-          const { data: dbOrders } = await supabase
-            .from('orders')
-            .select('*, order_items(*)')
-            .order('created_at', { ascending: false });
-          if (dbOrders && dbOrders.length > 0) {
-            const formatted = dbOrders.map((o) => ({
-              ...o,
-              items: o.order_items || o.items || [],
-            }));
-            setOrders(formatted);
-          }
-
-          const { data: dbExpenses } = await supabase
-            .from('expenses')
-            .select('*')
-            .order('expense_date', { ascending: false });
-          if (dbExpenses && dbExpenses.length > 0) {
-            const mapped: ExpenseItem[] = dbExpenses.map((d: Record<string, unknown>) => ({
-              id: String(d.id),
-              date: String(d.expense_date || d.created_at || '').slice(0, 10),
-              category: String(d.category || 'Operasional'),
-              amount: Number(d.amount) || 0,
-              description: String(d.description || '-'),
-            }));
-            setExpenses(mapped);
-          }
-
-          const { data: dbProducts } = await supabase.from('products').select('*');
-          if (dbProducts && dbProducts.length > 0) {
-            setProducts(dbProducts);
-          }
-        } catch (err) {
-          console.warn('Laporan sync fallback to local:', err);
-        }
+        const { data: dbProducts } = await supabase.from('products').select('*');
+        if (dbProducts && dbProducts.length > 0) setProducts(dbProducts);
+      } else {
+        const savedProducts = localStorage.getItem('lah_gabin_admin_products');
+        if (savedProducts) setProducts(JSON.parse(savedProducts));
       }
+    } catch (err) {
+      console.warn('Laporan data fetch error:', err);
     }
+  };
 
+  useEffect(() => {
     loadData();
 
-    // 3. Storage event listener for realtime updates across tabs
-    function syncStorage(e: StorageEvent) {
-      if (e.key === 'lah_gabin_admin_orders' && e.newValue) {
-        try {
-          setOrders(JSON.parse(e.newValue));
-        } catch {}
-      }
-      if (e.key === 'lah_gabin_admin_expenses' && e.newValue) {
-        try {
-          setExpenses(JSON.parse(e.newValue));
-        } catch {}
-      }
-      if (e.key === 'lah_gabin_admin_products' && e.newValue) {
-        try {
-          setProducts(JSON.parse(e.newValue));
-        } catch {}
-      }
-    }
+    const interval = setInterval(() => {
+      loadData();
+    }, 6000);
 
-    window.addEventListener('storage', syncStorage);
-    return () => window.removeEventListener('storage', syncStorage);
+    const onFocus = () => loadData();
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
 
   // Filter orders by month & completed status (or all active paid transactions)

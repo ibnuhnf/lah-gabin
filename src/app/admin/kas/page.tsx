@@ -21,43 +21,43 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 
-interface CashTransaction {
-  id: string;
-  type: 'IN' | 'OUT';
-  amount: number;
-  category: string;
-  description: string;
-  time: string;
-}
-
-// Reset ke 0: transaksi awal kosong
-const INITIAL_TRANSACTIONS: CashTransaction[] = [];
+import {
+  fetchAllCashTransactions,
+  createCashTransaction,
+  deleteCashTransactionPermanently,
+  autoReconcileAllCash,
+  type CashTransaction,
+} from '@/lib/cashbookStore';
 
 const INITIAL_BALANCE = 0;
-const STORAGE_KEY = 'lah_gabin_cash_transactions';
 
 export default function AdminCashPage() {
-  const [transactions, setTransactions] = useState<CashTransaction[]>(INITIAL_TRANSACTIONS);
+  const [transactions, setTransactions] = useState<CashTransaction[]>([]);
   const [period, setPeriod] = useState<'this_month' | 'last_month' | 'all'>('this_month');
   const [addModal, setAddModal] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
 
-  // Load from localStorage on mount
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setTransactions(JSON.parse(saved));
-    } catch {}
-  }, []);
-
-  // Persist helper
-  const persist = (next: CashTransaction[]) => {
-    setTransactions(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch {}
+  const loadData = async () => {
+    const list = await fetchAllCashTransactions();
+    setTransactions(list);
   };
+
+  useEffect(() => {
+    loadData();
+
+    const interval = setInterval(() => {
+      loadData();
+    }, 6000);
+
+    const onFocus = () => loadData();
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, []);
 
   // Form State
   const [form, setForm] = useState({
@@ -75,7 +75,7 @@ export default function AdminCashPage() {
 
     return transactions.filter((t) => {
       if (period === 'all') return true;
-      const tDate = new Date(t.time.replace(' ', 'T'));
+      const tDate = new Date(t.created_at || t.time.replace(' ', 'T'));
       if (isNaN(tDate.getTime())) return true;
       const tYear = tDate.getFullYear();
       const tMonth = tDate.getMonth();
@@ -103,37 +103,19 @@ export default function AdminCashPage() {
   const netCashflow = totalIn - totalOut;
   const saldoKas = INITIAL_BALANCE + netCashflow;
 
-  const handleAddTransaction = (e: React.FormEvent) => {
+  const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.amount || !form.description) return;
 
-    if (editId) {
-      const updated = transactions.map((t) =>
-        t.id === editId
-          ? {
-              ...t,
-              type: form.type,
-              amount: Number(form.amount) || 0,
-              category: form.category,
-              description: form.description,
-            }
-          : t
-      );
-      persist(updated);
-      setEditId(null);
-      setNotification('Transaksi kas berhasil diperbarui.');
-    } else {
-      const newTx: CashTransaction = {
-        id: crypto.randomUUID(),
-        type: form.type,
-        amount: Number(form.amount) || 0,
-        category: form.category,
-        description: form.description,
-        time: new Date().toISOString().replace('T', ' ').slice(0, 16),
-      };
-      persist([newTx, ...transactions]);
-      setNotification('Transaksi kas berhasil ditambahkan.');
-    }
+    await createCashTransaction({
+      type: form.type,
+      amount: Number(form.amount) || 0,
+      category: form.category,
+      description: form.description,
+    });
+
+    await loadData();
+    setNotification('Transaksi kas berhasil dicatat.');
 
     setAddModal(false);
     setForm({ type: 'IN', amount: '', category: 'PENJUALAN_POS', description: '' });
@@ -151,10 +133,10 @@ export default function AdminCashPage() {
     setAddModal(true);
   };
 
-  const handleDeleteTransaction = (id: string) => {
+  const handleDeleteTransaction = async (id: string) => {
     if (!window.confirm('Yakin ingin menghapus catatan kas ini?')) return;
-    const updated = transactions.filter((t) => t.id !== id);
-    persist(updated);
+    await deleteCashTransactionPermanently(id);
+    await loadData();
     setNotification('Transaksi kas berhasil dihapus.');
     setTimeout(() => setNotification(null), 3000);
   };
@@ -169,76 +151,11 @@ export default function AdminCashPage() {
     setForm({ ...form, amount: String(amt) });
   };
 
-  const handleReconcileAll = () => {
+  const handleReconcileAll = async () => {
     try {
-      // 1. Ambil order selesai
-      let completedOrders: Array<{
-        id: string;
-        invoice_code: string;
-        final_amount: number;
-        status: string;
-        created_at: string;
-      }> = [];
-      const ordersRaw = localStorage.getItem('lah_gabin_admin_orders');
-      if (ordersRaw) {
-        completedOrders = JSON.parse(ordersRaw).filter((o: any) => o.status === 'SELESAI');
-      }
-
-      // 2. Ambil expenses
-      let expensesList: Array<{
-        id: string;
-        amount: number;
-        category: string;
-        description: string;
-        date: string;
-      }> = [];
-      const expRaw = localStorage.getItem('lah_gabin_admin_expenses');
-      if (expRaw) {
-        expensesList = JSON.parse(expRaw);
-      }
-
-      // 3. Bangun transaksi kas terpadu (murni order selesai + pengeluaran riil)
-      const syncedTransactions: CashTransaction[] = [];
-
-      // Masukkan semua order SELESAI
-      completedOrders.forEach((o) => {
-        syncedTransactions.push({
-          id: `order-cash-${o.id}`,
-          type: 'IN',
-          amount: o.final_amount || 0,
-          category: 'PENJUALAN_POS',
-          description: `Penjualan Selesai #${o.invoice_code}`,
-          time: o.created_at ? o.created_at.replace('T', ' ').slice(0, 16) : new Date().toISOString().replace('T', ' ').slice(0, 16),
-        });
-      });
-
-      // Masukkan semua pengeluaran riil
-      const categoryMap: Record<string, string> = {
-        'Bahan Baku': 'BAHAN_BAKU',
-        'Kemasan / Packaging': 'KEMASAN',
-        'Operasional (Gas / Listrik / Air)': 'OPERASIONAL',
-        'Transportasi / Logistik': 'OPERASIONAL',
-        'Marketing / Iklan': 'LAINNYA',
-        'Gaji / Upah': 'LAINNYA',
-        'Lain-lain': 'LAINNYA',
-      };
-
-      expensesList.forEach((e) => {
-        syncedTransactions.push({
-          id: `expense-cash-${e.id}`,
-          type: 'OUT',
-          amount: e.amount || 0,
-          category: categoryMap[e.category] || 'OPERASIONAL',
-          description: `${e.category}: ${e.description || '-'}`,
-          time: `${e.date} 00:00`,
-        });
-      });
-
-      // Urutkan dari yang terbaru
-      syncedTransactions.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
-
-      persist(syncedTransactions);
-      setNotification(`Buku Kas berhasil disinkronkan (${completedOrders.length} penjualan, ${expensesList.length} pengeluaran).`);
+      const res = await autoReconcileAllCash();
+      await loadData();
+      setNotification(`Buku Kas berhasil disinkronkan (${res.inCount} penjualan, ${res.outCount} pengeluaran).`);
       setTimeout(() => setNotification(null), 3500);
     } catch {
       setNotification('Gagal melakukan rekonsiliasi data kas.');
