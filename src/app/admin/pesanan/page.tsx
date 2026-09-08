@@ -54,37 +54,69 @@ export default function AdminOrdersPage() {
   const [deleteModal, setDeleteModal] = useState<{ id: string; name: string; invoice: string } | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const local = localStorage.getItem('lah_gabin_admin_orders');
-        if (local) {
-          setOrders(JSON.parse(local));
-        } else {
-          localStorage.setItem('lah_gabin_admin_orders', JSON.stringify(FALLBACK_ORDERS));
-        }
-      } catch {}
+  const fetchOrders = async () => {
+    try {
+      const local = localStorage.getItem('lah_gabin_admin_orders');
+      if (local && orders.length === 0) {
+        setOrders(JSON.parse(local));
+      }
+    } catch {}
 
-      if (isSupabaseConfigured()) {
-        try {
-          const { data, error } = await supabase
-            .from('orders')
-            .select('*, order_items(*)')
-            .order('created_at', { ascending: false });
-          if (!error && data && data.length > 0) {
-            const formatted = data.map((d) => ({
-              ...d,
-              items: d.order_items || d.items || [],
-            }));
-            setOrders(formatted);
-            try {
-              localStorage.setItem('lah_gabin_admin_orders', JSON.stringify(formatted));
-            } catch {}
-          }
-        } catch {}
+    if (isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*, order_items(*)')
+          .order('created_at', { ascending: false });
+        if (!error && data && data.length > 0) {
+          const formatted = data.map((d) => ({
+            ...d,
+            items: d.order_items || d.items || [],
+          }));
+          setOrders(formatted);
+          try {
+            localStorage.setItem('lah_gabin_admin_orders', JSON.stringify(formatted));
+          } catch {}
+        }
+      } catch (err) {
+        console.warn('Error fetching orders from Supabase:', err);
       }
     }
-    load();
+  };
+
+  useEffect(() => {
+    fetchOrders();
+
+    // 1. Polling setiap 6 detik untuk mendeteksi order baru dari device lain (HP customer)
+    const interval = setInterval(() => {
+      fetchOrders();
+    }, 6000);
+
+    // 2. Real-time Supabase postgres_changes channel
+    let channel: any = null;
+    if (isSupabaseConfigured()) {
+      try {
+        channel = supabase
+          .channel('realtime_orders_admin')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'orders' },
+            () => {
+              fetchOrders();
+            }
+          )
+          .subscribe();
+      } catch {}
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (channel && isSupabaseConfigured()) {
+        try {
+          supabase.removeChannel(channel);
+        } catch {}
+      }
+    };
   }, []);
 
   const saveOrdersState = (newList: Order[]) => {

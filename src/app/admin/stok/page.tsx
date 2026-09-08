@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, Boxes, X, Save } from 'lucide-react';
+import { Plus, Boxes, X, Save, Pencil, Trash2 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 interface StockMutation {
@@ -232,16 +232,159 @@ export default function AdminStockPage() {
         setMutations(newMutations);
       } catch {}
 
-      setMessage(`Mutasi ${type} ${numQty} pcs berhasil dicatat!`);
-      setTimeout(() => setMessage(null), 2500);
-      setOpen(false);
-      setProductId('');
-      setQty('');
       setNotes('');
       await loadAll();
     } catch (err) {
       console.error(err);
       setMessage('Gagal menyimpan mutasi.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Edit modal state
+  const [editingMutation, setEditingMutation] = useState<StockMutation | null>(null);
+  const [editType, setEditType] = useState('MASUK_PEMBELIAN');
+  const [editQty, setEditQty] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+
+  // Delete Mutation (with Stock Rollback)
+  async function handleDeleteMutation(m: StockMutation) {
+    if (!window.confirm(`Yakin ingin menghapus riwayat mutasi "${m.item}" (${m.qty > 0 ? '+' + m.qty : m.qty} pcs)? Stok produk akan dikembalikan secara otomatis.`)) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // 1. Rollback stock: jika mutasi dulu +5, rollback jadi -5. Jika dulu -5, rollback jadi +5.
+      const rollbackDelta = -m.qty;
+      const targetProd = products.find((p) => p.name.toLowerCase() === m.item.toLowerCase() || p.id === m.item);
+
+      if (targetProd) {
+        const newStock = Math.max(0, targetProd.stock_quantity + rollbackDelta);
+        const newStatus = newStock > 0 ? 'active' : 'po_mode';
+
+        // Update di Supabase
+        if (isSupabaseConfigured()) {
+          try {
+            await supabase.from('products').update({ stock_quantity: newStock, status: newStatus }).eq('id', targetProd.id);
+            await supabase.from('stock_mutations').delete().eq('id', m.id);
+          } catch {}
+        }
+
+        // Update local products cache
+        try {
+          const localProd = localStorage.getItem('lah_gabin_admin_products');
+          if (localProd) {
+            const parsed = JSON.parse(localProd);
+            const updated = parsed.map((p: Product) => (p.id === targetProd.id ? { ...p, stock_quantity: newStock, status: newStatus } : p));
+            localStorage.setItem('lah_gabin_admin_products', JSON.stringify(updated));
+          }
+        } catch {}
+      } else {
+        // Hapus mutasi saja jika produk tidak ketemu
+        if (isSupabaseConfigured()) {
+          try {
+            await supabase.from('stock_mutations').delete().eq('id', m.id);
+          } catch {}
+        }
+      }
+
+      // Update local mutations
+      const nextMutations = mutations.filter((item) => item.id !== m.id);
+      setMutations(nextMutations);
+      try {
+        localStorage.setItem('lah_gabin_stock_mutations', JSON.stringify(nextMutations));
+      } catch {}
+
+      setMessage(`Mutasi berhasil dihapus dan stok produk "${m.item}" telah disesuaikan.`);
+      setTimeout(() => setMessage(null), 3000);
+      await loadAll();
+    } catch {
+      setMessage('Gagal menghapus mutasi stok.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Open Edit Modal
+  function openEdit(m: StockMutation) {
+    setEditingMutation(m);
+    setEditType(m.type);
+    setEditQty(String(Math.abs(m.qty)));
+    setEditNotes(m.notes === '-' ? '' : m.notes);
+  }
+
+  // Handle Edit Submit
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingMutation) return;
+
+    const numQty = Math.abs(Number(editQty));
+    if (!numQty || numQty <= 0) {
+      setMessage('Jumlah harus lebih dari 0');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const oldDelta = editingMutation.qty;
+      const newDelta = getDeltaForType(editType, numQty);
+      const diffDelta = newDelta - oldDelta; // Selisih stok yang harus ditambah/dikurang
+
+      const targetProd = products.find((p) => p.name.toLowerCase() === editingMutation.item.toLowerCase() || p.id === editingMutation.item);
+
+      if (targetProd) {
+        const newStock = Math.max(0, targetProd.stock_quantity + diffDelta);
+        const newStatus = newStock > 0 ? 'active' : 'po_mode';
+
+        // Update di Supabase
+        if (isSupabaseConfigured()) {
+          try {
+            await supabase.from('products').update({ stock_quantity: newStock, status: newStatus }).eq('id', targetProd.id);
+            await supabase.from('stock_mutations').update({
+              mutation_type: editType,
+              quantity_change: newDelta,
+              stock_after: Math.max(0, editingMutation.before + newDelta),
+              notes: `${editingMutation.item}: ${editNotes || '-'}`,
+            }).eq('id', editingMutation.id);
+          } catch {}
+        }
+
+        // Update local products cache
+        try {
+          const localProd = localStorage.getItem('lah_gabin_admin_products');
+          if (localProd) {
+            const parsed = JSON.parse(localProd);
+            const updated = parsed.map((p: Product) => (p.id === targetProd.id ? { ...p, stock_quantity: newStock, status: newStatus } : p));
+            localStorage.setItem('lah_gabin_admin_products', JSON.stringify(updated));
+          }
+        } catch {}
+      }
+
+      // Update local mutations
+      const updatedList = mutations.map((m) =>
+        m.id === editingMutation.id
+          ? {
+              ...m,
+              type: editType,
+              qty: newDelta,
+              after: Math.max(0, m.before + newDelta),
+              notes: editNotes || '-',
+            }
+          : m
+      );
+      setMutations(updatedList);
+      try {
+        localStorage.setItem('lah_gabin_stock_mutations', JSON.stringify(updatedList));
+      } catch {}
+
+      setMessage(`Mutasi stok "${editingMutation.item}" berhasil diperbarui!`);
+      setTimeout(() => setMessage(null), 3000);
+      setEditingMutation(null);
+      await loadAll();
+    } catch {
+      setMessage('Gagal memperbarui mutasi stok.');
     } finally {
       setSaving(false);
     }
@@ -285,18 +428,19 @@ export default function AdminStockPage() {
                 <th className="text-right px-4 py-3.5 font-semibold">Sebelum</th>
                 <th className="text-right px-4 py-3.5 font-semibold">Sesudah</th>
                 <th className="text-left px-4 py-3.5 font-semibold">Catatan</th>
+                <th className="text-center px-4 py-3.5 font-semibold">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
               {mutations.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-10 text-xs text-neutral-400">
+                  <td colSpan={8} className="text-center py-10 text-xs text-neutral-400">
                     Belum ada mutasi stok. Klik tombol <b>Catat Penyesuaian</b> untuk menambah.
                   </td>
                 </tr>
               ) : (
                 mutations.map((m) => (
-                  <tr key={m.id} className="table-row">
+                  <tr key={m.id} className="table-row hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50 transition-colors">
                     <td className="px-4 py-3.5 text-neutral-400 font-mono">
                       {new Date(m.time).toLocaleString('id-ID', {
                         day: '2-digit',
@@ -317,6 +461,26 @@ export default function AdminStockPage() {
                     <td className="px-4 py-3.5 text-right text-neutral-400">{m.before}</td>
                     <td className="px-4 py-3.5 text-right font-bold text-neutral-900 dark:text-white">{m.after}</td>
                     <td className="px-4 py-3.5 text-neutral-500 dark:text-neutral-400">{m.notes}</td>
+                    <td className="px-4 py-3.5 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => openEdit(m)}
+                          className="p-1.5 rounded-lg text-neutral-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
+                          title="Edit Mutasi"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteMutation(m)}
+                          className="p-1.5 rounded-lg text-neutral-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                          title="Hapus Mutasi (Rollback Stok)"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}
@@ -325,7 +489,7 @@ export default function AdminStockPage() {
         </div>
       </div>
 
-      {/* Modal Catat Mutasi */}
+      {/* Modal Catat Mutasi Baru */}
       {open && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full max-w-md border border-neutral-200 dark:border-neutral-800">
@@ -421,6 +585,102 @@ export default function AdminStockPage() {
                   className="btn-primary flex-1 text-xs"
                 >
                   <Save size={14} /> {saving ? 'Menyimpan...' : 'Simpan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Edit Mutasi */}
+      {editingMutation && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full max-w-md border border-neutral-200 dark:border-neutral-800">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-neutral-800">
+              <h2 className="font-heading font-extrabold text-base text-neutral-900 dark:text-white flex items-center gap-2">
+                <Pencil size={18} /> Edit Mutasi: {editingMutation.item}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setEditingMutation(null)}
+                className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="px-5 py-4 space-y-3.5">
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                  Produk (Terkunci)
+                </label>
+                <input
+                  type="text"
+                  value={editingMutation.item}
+                  disabled
+                  className="input-field mt-1 text-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-500 cursor-not-allowed"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                  Tipe Mutasi
+                </label>
+                <select
+                  value={editType}
+                  onChange={(e) => setEditType(e.target.value)}
+                  className="input-field mt-1 text-xs"
+                >
+                  {TYPE_OPTIONS.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                  Jumlah (pcs)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={editQty}
+                  onChange={(e) => setEditQty(e.target.value)}
+                  className="input-field mt-1 text-xs"
+                  placeholder="contoh: 10"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                  Catatan
+                </label>
+                <textarea
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  className="input-field mt-1 text-xs"
+                  rows={2}
+                  placeholder="Catatan penyesuaian..."
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingMutation(null)}
+                  className="btn-secondary flex-1 text-xs"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="btn-primary flex-1 text-xs"
+                >
+                  <Save size={14} /> {saving ? 'Menyimpan...' : 'Perbarui Mutasi'}
                 </button>
               </div>
             </form>

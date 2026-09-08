@@ -169,6 +169,83 @@ export default function AdminCashPage() {
     setForm({ ...form, amount: String(amt) });
   };
 
+  const handleReconcileAll = () => {
+    try {
+      // 1. Ambil order selesai
+      let completedOrders: Array<{
+        id: string;
+        invoice_code: string;
+        final_amount: number;
+        status: string;
+        created_at: string;
+      }> = [];
+      const ordersRaw = localStorage.getItem('lah_gabin_admin_orders');
+      if (ordersRaw) {
+        completedOrders = JSON.parse(ordersRaw).filter((o: any) => o.status === 'SELESAI');
+      }
+
+      // 2. Ambil expenses
+      let expensesList: Array<{
+        id: string;
+        amount: number;
+        category: string;
+        description: string;
+        date: string;
+      }> = [];
+      const expRaw = localStorage.getItem('lah_gabin_admin_expenses');
+      if (expRaw) {
+        expensesList = JSON.parse(expRaw);
+      }
+
+      // 3. Bangun transaksi kas terpadu (murni order selesai + pengeluaran riil)
+      const syncedTransactions: CashTransaction[] = [];
+
+      // Masukkan semua order SELESAI
+      completedOrders.forEach((o) => {
+        syncedTransactions.push({
+          id: `order-cash-${o.id}`,
+          type: 'IN',
+          amount: o.final_amount || 0,
+          category: 'PENJUALAN_POS',
+          description: `Penjualan Selesai #${o.invoice_code}`,
+          time: o.created_at ? o.created_at.replace('T', ' ').slice(0, 16) : new Date().toISOString().replace('T', ' ').slice(0, 16),
+        });
+      });
+
+      // Masukkan semua pengeluaran riil
+      const categoryMap: Record<string, string> = {
+        'Bahan Baku': 'BAHAN_BAKU',
+        'Kemasan / Packaging': 'KEMASAN',
+        'Operasional (Gas / Listrik / Air)': 'OPERASIONAL',
+        'Transportasi / Logistik': 'OPERASIONAL',
+        'Marketing / Iklan': 'LAINNYA',
+        'Gaji / Upah': 'LAINNYA',
+        'Lain-lain': 'LAINNYA',
+      };
+
+      expensesList.forEach((e) => {
+        syncedTransactions.push({
+          id: `expense-cash-${e.id}`,
+          type: 'OUT',
+          amount: e.amount || 0,
+          category: categoryMap[e.category] || 'OPERASIONAL',
+          description: `${e.category}: ${e.description || '-'}`,
+          time: `${e.date} 00:00`,
+        });
+      });
+
+      // Urutkan dari yang terbaru
+      syncedTransactions.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+
+      persist(syncedTransactions);
+      setNotification(`Buku Kas berhasil disinkronkan (${completedOrders.length} penjualan, ${expensesList.length} pengeluaran).`);
+      setTimeout(() => setNotification(null), 3500);
+    } catch {
+      setNotification('Gagal melakukan rekonsiliasi data kas.');
+      setTimeout(() => setNotification(null), 3000);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Toast Notification */}
@@ -190,12 +267,21 @@ export default function AdminCashPage() {
           </p>
         </div>
 
-        <button
-          onClick={openAddModal}
-          className="btn-primary text-xs shadow-md"
-        >
-          <Plus size={16} /> Catat Mutasi Baru
-        </button>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            onClick={handleReconcileAll}
+            className="btn-secondary text-xs shadow-sm flex items-center gap-1.5"
+            title="Sinkronkan seluruh pesanan selesai dan data beban pengeluaran agar saldo 100% konsisten"
+          >
+            <TrendingUp size={15} className="text-blue-500" /> Sinkronkan Otomatis (Rekonsiliasi)
+          </button>
+          <button
+            onClick={openAddModal}
+            className="btn-primary text-xs shadow-md"
+          >
+            <Plus size={16} /> Catat Mutasi Baru
+          </button>
+        </div>
       </div>
 
       {/* Top Section: My Balance Card + Quick Transfer Form (Bankzai Balance style) */}
