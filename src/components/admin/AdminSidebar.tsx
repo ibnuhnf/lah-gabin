@@ -24,7 +24,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useStoreConfig } from '@/contexts/StoreContext';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface AdminSidebarProps {
   mobileOpen?: boolean;
@@ -67,6 +67,60 @@ export default function AdminSidebar({
   onToggleCollapse,
 }: AdminSidebarProps) {
   const pathname = usePathname();
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const fetchPendingCount = async () => {
+    if (isSupabaseConfigured()) {
+      try {
+        const { count, error } = await supabase
+          .from('orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'PENDING_APPROVAL');
+        if (!error && count !== null) {
+          setPendingCount(count);
+          return;
+        }
+      } catch {}
+    }
+    try {
+      const local = localStorage.getItem('lah_gabin_admin_orders');
+      if (local) {
+        const parsed = JSON.parse(local);
+        const count = parsed.filter((o: any) => o.status === 'PENDING_APPROVAL').length;
+        setPendingCount(count);
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    fetchPendingCount();
+    const interval = setInterval(fetchPendingCount, 15000);
+
+    let channel: any = null;
+    if (isSupabaseConfigured()) {
+      try {
+        channel = supabase
+          .channel('adminsidebar-orders-channel')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'orders' },
+            () => {
+              fetchPendingCount();
+            }
+          )
+          .subscribe();
+      } catch {}
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (channel && isSupabaseConfigured()) {
+        try {
+          supabase.removeChannel(channel);
+        } catch {}
+      }
+    };
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -149,6 +203,7 @@ export default function AdminSidebar({
                   const isActive =
                     pathname === item.href ||
                     (item.href !== '/admin/dashboard' && pathname.startsWith(item.href));
+                  const showBadge = item.href === '/admin/pesanan' && pendingCount > 0;
 
                   return (
                     <Link
@@ -166,7 +221,7 @@ export default function AdminSidebar({
                           : 'text-neutral-600 dark:text-neutral-400 hover:bg-slate-100 dark:hover:bg-white/[0.04] hover:text-neutral-900 dark:hover:text-white'
                       )}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         <Icon
                           size={18}
                           className={cn(
@@ -178,8 +233,23 @@ export default function AdminSidebar({
                         />
                         {!collapsed && <span className="truncate">{item.label}</span>}
                       </div>
-                      {!collapsed && isActive && (
+                      {!collapsed && showBadge && (
+                        <span className={cn(
+                          'min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-extrabold flex items-center justify-center animate-pulse',
+                          isActive
+                            ? 'bg-white text-blue-600'
+                            : 'bg-rose-500 text-white shadow-sm'
+                        )}>
+                          {pendingCount > 9 ? '9+' : pendingCount}
+                        </span>
+                      )}
+                      {!collapsed && isActive && !showBadge && (
                         <ChevronRight size={14} className="text-white/70" />
+                      )}
+                      {collapsed && showBadge && (
+                        <span className="absolute ml-7 -mt-5 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-extrabold rounded-full ring-2 ring-white dark:ring-[#0b0d12] flex items-center justify-center animate-pulse">
+                          {pendingCount > 9 ? '9+' : pendingCount}
+                        </span>
                       )}
                     </Link>
                   );

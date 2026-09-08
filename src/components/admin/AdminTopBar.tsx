@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Search,
@@ -15,10 +15,16 @@ import {
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
+  ClipboardCheck,
+  Clock,
+  ArrowRight,
+  CheckCircle2,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useStoreConfig } from '@/contexts/StoreContext';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { formatRupiah } from '@/lib/utils';
+import type { Order } from '@/types';
 
 interface AdminTopBarProps {
   onMobileMenuClick?: () => void;
@@ -36,7 +42,63 @@ export default function AdminTopBar({
   const [searchOpen, setSearchOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
   const isOpen = Boolean(config?.is_open);
+
+  const fetchPendingOrders = async () => {
+    let foundOrders: Order[] = [];
+    if (isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('status', 'PENDING_APPROVAL')
+          .order('created_at', { ascending: false });
+        if (!error && data) {
+          foundOrders = data;
+        }
+      } catch {}
+    } else {
+      try {
+        const local = localStorage.getItem('lah_gabin_admin_orders');
+        if (local) {
+          const parsed: Order[] = JSON.parse(local);
+          foundOrders = parsed.filter((o) => o.status === 'PENDING_APPROVAL');
+        }
+      } catch {}
+    }
+    setPendingOrders(foundOrders);
+  };
+
+  useEffect(() => {
+    fetchPendingOrders();
+    const interval = setInterval(fetchPendingOrders, 15000);
+
+    let channel: any = null;
+    if (isSupabaseConfigured()) {
+      try {
+        channel = supabase
+          .channel('admintopbar-orders-channel')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'orders' },
+            () => {
+              fetchPendingOrders();
+            }
+          )
+          .subscribe();
+      } catch {}
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (channel && isSupabaseConfigured()) {
+        try {
+          supabase.removeChannel(channel);
+        } catch {}
+      }
+    };
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -133,7 +195,11 @@ export default function AdminTopBar({
               aria-label="Notifikasi"
             >
               <Bell size={17} />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white dark:ring-[#0b0d12]" />
+              {pendingOrders.length > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white font-black text-[10px] rounded-full ring-2 ring-white dark:ring-[#0b0d12] flex items-center justify-center animate-pulse shadow-sm">
+                  {pendingOrders.length > 9 ? '9+' : pendingOrders.length}
+                </span>
+              )}
             </button>
             {notifOpen && (
               <>
@@ -141,15 +207,70 @@ export default function AdminTopBar({
                   className="fixed inset-0 z-10"
                   onClick={() => setNotifOpen(false)}
                 />
-                <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-[#12141a] rounded-2xl border border-slate-200/70 dark:border-white/[0.08] shadow-xl z-20 overflow-hidden">
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-[#12141a] rounded-2xl border border-slate-200/70 dark:border-white/[0.08] shadow-2xl z-20 overflow-hidden animate-in fade-in zoom-in-95">
                   <div className="p-4 border-b border-slate-100 dark:border-white/[0.05] flex items-center justify-between">
-                    <h3 className="font-heading font-bold text-sm text-neutral-900 dark:text-white">
-                      Notifikasi
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-heading font-bold text-sm text-neutral-900 dark:text-white">
+                        Notifikasi
+                      </h3>
+                      {pendingOrders.length > 0 && (
+                        <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 font-extrabold text-[10px]">
+                          {pendingOrders.length} Menunggu Konfirmasi
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="p-8 text-center text-xs text-neutral-500 dark:text-neutral-400">
-                    Tidak ada notifikasi
+
+                  <div className="max-h-[340px] overflow-y-auto divide-y divide-slate-100 dark:divide-white/[0.04]">
+                    {pendingOrders.length === 0 ? (
+                      <div className="p-8 text-center flex flex-col items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
+                        <CheckCircle2 size={24} className="text-emerald-500 opacity-80" />
+                        <p className="font-semibold">Semua pesanan telah dikonfirmasi</p>
+                        <p className="text-[11px] text-neutral-400">Belum ada pesanan baru yang membutuhkan tindakan.</p>
+                      </div>
+                    ) : (
+                      pendingOrders.map((order) => (
+                        <Link
+                          key={order.id || order.invoice_code}
+                          href="/admin/pesanan"
+                          onClick={() => setNotifOpen(false)}
+                          className="p-3.5 flex items-start gap-3 hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors group block"
+                        >
+                          <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                            <Clock size={16} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1">
+                              <p className="text-xs font-bold text-neutral-900 dark:text-white truncate">
+                                {order.customer_name || 'Pelanggan'}
+                              </p>
+                              <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400 shrink-0">
+                                {order.invoice_code}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                              Total: <span className="font-bold text-neutral-800 dark:text-neutral-200">{formatRupiah(order.final_amount)}</span>
+                            </p>
+                            <p className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1 group-hover:underline">
+                              Perlu konfirmasi admin <ArrowRight size={10} />
+                            </p>
+                          </div>
+                        </Link>
+                      ))
+                    )}
                   </div>
+
+                  {pendingOrders.length > 0 && (
+                    <div className="p-2.5 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-100 dark:border-white/[0.05]">
+                      <Link
+                        href="/admin/pesanan"
+                        onClick={() => setNotifOpen(false)}
+                        className="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+                      >
+                        <ClipboardCheck size={14} /> Kelola Pesanan Masuk
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </>
             )}
