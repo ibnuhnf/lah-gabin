@@ -41,28 +41,56 @@ export async function fetchAllOrders(): Promise<Order[]> {
 export async function createOrder(orderPayload: any, itemsPayload: any[]): Promise<{ success: boolean; data?: any; error?: string }> {
   const isUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
 
+  // Optional: Validasi server-side via API route jika tersedia di environment
+  let validatedOrder = { ...orderPayload };
+  let validatedItems = itemsPayload;
+  if (typeof window !== 'undefined' && orderPayload.order_source !== 'POS') {
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderPayload,
+          itemsPayload,
+          voucherCode: orderPayload.voucher_code,
+        }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          validatedOrder = { ...validatedOrder, ...json.data.order };
+          if (json.data.items) {
+            validatedItems = json.data.items;
+          }
+        }
+      }
+    } catch {
+      // Graceful fallback to client calculation
+    }
+  }
+
   // Gabungkan alamat & catatan ke customer_notes agar tidak ditolak schema database
   const notesParts = [];
-  if (orderPayload.customer_address) notesParts.push(`Alamat: ${orderPayload.customer_address}`);
-  if (orderPayload.delivery_zone) notesParts.push(`Zona: ${orderPayload.delivery_zone}`);
-  if (orderPayload.customer_notes) notesParts.push(orderPayload.customer_notes);
+  if (validatedOrder.customer_address) notesParts.push(`Alamat: ${validatedOrder.customer_address}`);
+  if (validatedOrder.delivery_zone) notesParts.push(`Zona: ${validatedOrder.delivery_zone}`);
+  if (validatedOrder.customer_notes) notesParts.push(validatedOrder.customer_notes);
   const combinedNotes = notesParts.join(' | ') || null;
 
   // Supabase db order payload: hanya kolom yang valid di schema Supabase
   const dbOrderPayload: any = {
-    id: isUuid(orderPayload.id) ? orderPayload.id : crypto.randomUUID(),
-    invoice_code: orderPayload.invoice_code,
-    customer_name: orderPayload.customer_name || 'Pelanggan',
-    customer_wa: orderPayload.customer_wa || '-',
+    id: isUuid(validatedOrder.id) ? validatedOrder.id : crypto.randomUUID(),
+    invoice_code: validatedOrder.invoice_code,
+    customer_name: validatedOrder.customer_name || 'Pelanggan',
+    customer_wa: validatedOrder.customer_wa || '-',
     customer_notes: combinedNotes,
-    total_amount: Number(orderPayload.total_amount) || 0,
-    discount_amount: Number(orderPayload.discount_amount) || 0,
-    final_amount: Number(orderPayload.final_amount) || 0,
-    payment_method: orderPayload.payment_method || 'QRIS',
-    status: orderPayload.status || 'PENDING_APPROVAL',
-    voucher_id: isUuid(orderPayload.voucher_id) ? orderPayload.voucher_id : null,
-    order_source: orderPayload.order_source || 'ONLINE',
-    created_at: orderPayload.created_at || new Date().toISOString(),
+    total_amount: Number(validatedOrder.total_amount) || 0,
+    discount_amount: Number(validatedOrder.discount_amount) || 0,
+    final_amount: Number(validatedOrder.final_amount) || 0,
+    payment_method: validatedOrder.payment_method || 'QRIS',
+    status: validatedOrder.status || 'PENDING_APPROVAL',
+    voucher_id: isUuid(validatedOrder.voucher_id) ? validatedOrder.voucher_id : null,
+    order_source: validatedOrder.order_source || 'ONLINE',
+    created_at: validatedOrder.created_at || new Date().toISOString(),
   };
 
   // 1. Simpan ke Supabase Cloud
