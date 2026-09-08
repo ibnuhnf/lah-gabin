@@ -13,14 +13,23 @@ export async function fetchAllExpenses(): Promise<Expense[]> {
         .order('created_at', { ascending: false });
 
       if (!error && data) {
-        const formatted: Expense[] = data.map((d: any) => ({
-          id: d.id,
-          amount: Number(d.amount),
-          description: d.description,
-          category: d.category || 'OPERASIONAL',
-          date: d.expense_date || d.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
-          created_at: d.created_at,
-        }));
+        const formatted: Expense[] = data.map((d: any) => {
+          let cat = 'OPERASIONAL';
+          let desc = d.description || '';
+          const match = desc.match(/^\[(.*?)\]\s*(.*)$/);
+          if (match) {
+            cat = match[1];
+            desc = match[2];
+          }
+          return {
+            id: d.id,
+            amount: Number(d.amount),
+            description: desc,
+            category: cat,
+            date: d.expense_date || d.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+            created_at: d.created_at,
+          };
+        });
         try {
           localStorage.setItem(EXPENSES_KEY, JSON.stringify(formatted));
         } catch {}
@@ -43,6 +52,10 @@ export async function fetchAllExpenses(): Promise<Expense[]> {
 export async function createExpense(expensePayload: Omit<Expense, 'id'>): Promise<Expense> {
   const newId = crypto.randomUUID();
   const createdAt = new Date().toISOString();
+  const descWithCategory = expensePayload.category && !expensePayload.description.startsWith(`[${expensePayload.category}]`)
+    ? `[${expensePayload.category}] ${expensePayload.description}`
+    : expensePayload.description;
+
   const newExpense: Expense = {
     id: newId,
     amount: expensePayload.amount,
@@ -58,7 +71,7 @@ export async function createExpense(expensePayload: Omit<Expense, 'id'>): Promis
       await supabase.from('expenses').insert([{
         id: newId,
         amount: newExpense.amount,
-        description: newExpense.description,
+        description: descWithCategory,
         expense_date: newExpense.date,
         created_at: createdAt,
       }]);

@@ -39,12 +39,30 @@ export async function fetchAllOrders(): Promise<Order[]> {
 }
 
 export async function createOrder(orderPayload: any, itemsPayload: any[]): Promise<{ success: boolean; data?: any; error?: string }> {
-  // Pastikan customer_wa tidak null karena schema database
-  const safeOrderPayload = {
-    ...orderPayload,
+  const isUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
+  // Gabungkan alamat & catatan ke customer_notes agar tidak ditolak schema database
+  const notesParts = [];
+  if (orderPayload.customer_address) notesParts.push(`Alamat: ${orderPayload.customer_address}`);
+  if (orderPayload.delivery_zone) notesParts.push(`Zona: ${orderPayload.delivery_zone}`);
+  if (orderPayload.customer_notes) notesParts.push(orderPayload.customer_notes);
+  const combinedNotes = notesParts.join(' | ') || null;
+
+  // Supabase db order payload: hanya kolom yang valid di schema Supabase
+  const dbOrderPayload: any = {
+    id: isUuid(orderPayload.id) ? orderPayload.id : crypto.randomUUID(),
+    invoice_code: orderPayload.invoice_code,
+    customer_name: orderPayload.customer_name || 'Pelanggan',
     customer_wa: orderPayload.customer_wa || '-',
-    customer_notes: orderPayload.customer_notes || null,
-    customer_address: orderPayload.customer_address || '-',
+    customer_notes: combinedNotes,
+    total_amount: Number(orderPayload.total_amount) || 0,
+    discount_amount: Number(orderPayload.discount_amount) || 0,
+    final_amount: Number(orderPayload.final_amount) || 0,
+    payment_method: orderPayload.payment_method || 'QRIS',
+    status: orderPayload.status || 'PENDING_APPROVAL',
+    voucher_id: isUuid(orderPayload.voucher_id) ? orderPayload.voucher_id : null,
+    order_source: orderPayload.order_source || 'ONLINE',
+    created_at: orderPayload.created_at || new Date().toISOString(),
   };
 
   // 1. Simpan ke Supabase Cloud
@@ -52,19 +70,27 @@ export async function createOrder(orderPayload: any, itemsPayload: any[]): Promi
     try {
       const { data: dbOrder, error: orderErr } = await supabase
         .from('orders')
-        .insert([safeOrderPayload])
+        .insert([dbOrderPayload])
         .select()
         .maybeSingle();
 
       if (orderErr) {
         console.error('Supabase order insert error:', orderErr);
-      } else if (dbOrder) {
-        if (itemsPayload && itemsPayload.length > 0) {
-          const { error: itemsErr } = await supabase
-            .from('order_items')
-            .insert(itemsPayload);
-          if (itemsErr) console.error('Supabase order_items insert error:', itemsErr);
-        }
+      } else if (dbOrder && itemsPayload && itemsPayload.length > 0) {
+        const sanitizedItems = itemsPayload.map((item) => ({
+          id: isUuid(item.id) ? item.id : crypto.randomUUID(),
+          order_id: dbOrder.id,
+          product_id: isUuid(item.product_id) ? item.product_id : null,
+          product_name: item.product_name || 'Produk',
+          price_snapshot: Number(item.price_snapshot) || 0,
+          quantity: Number(item.quantity) || 1,
+          subtotal: Number(item.subtotal) || 0,
+        }));
+
+        const { error: itemsErr } = await supabase
+          .from('order_items')
+          .insert(sanitizedItems);
+        if (itemsErr) console.error('Supabase order_items insert error:', itemsErr);
       }
     } catch (err) {
       console.error('Network/Exception inserting order to Supabase:', err);
@@ -74,18 +100,20 @@ export async function createOrder(orderPayload: any, itemsPayload: any[]): Promi
   // 2. Simpan ke Local Storage Cache
   try {
     const fullOrder: Order = {
-      ...safeOrderPayload,
+      ...orderPayload,
+      id: dbOrderPayload.id,
+      customer_notes: combinedNotes,
       items: itemsPayload,
       order_items: itemsPayload,
     };
-    localStorage.setItem(`lah_gabin_order_${safeOrderPayload.invoice_code}`, JSON.stringify(fullOrder));
+    localStorage.setItem(`lah_gabin_order_${dbOrderPayload.invoice_code}`, JSON.stringify(fullOrder));
 
     const existing: Order[] = JSON.parse(localStorage.getItem(FALLBACK_ORDERS_KEY) || '[]');
-    const filtered = existing.filter((o) => o.id !== safeOrderPayload.id && o.invoice_code !== safeOrderPayload.invoice_code);
+    const filtered = existing.filter((o) => o.id !== dbOrderPayload.id && o.invoice_code !== dbOrderPayload.invoice_code);
     localStorage.setItem(FALLBACK_ORDERS_KEY, JSON.stringify([fullOrder, ...filtered]));
   } catch {}
 
-  return { success: true, data: safeOrderPayload };
+  return { success: true, data: dbOrderPayload };
 }
 
 export async function updateOrderStatus(
