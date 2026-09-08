@@ -63,7 +63,9 @@ export default function ProductCard({ product }: ProductCardProps) {
                 : 'bg-amber-600/90 text-white'
             }`}
           >
-            {stockLabel === 'ready' ? 'Ready' : 'Pre-Order'}
+            {stockLabel === 'ready'
+              ? `Ready (${product.stock_quantity ?? 0})`
+              : 'Pre-Order'}
           </span>
         )}
 
