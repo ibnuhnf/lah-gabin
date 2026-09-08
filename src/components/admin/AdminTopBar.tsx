@@ -24,6 +24,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useStoreConfig } from '@/contexts/StoreContext';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { formatRupiah } from '@/lib/utils';
+import { fetchAllOrders } from '@/lib/orderStore';
 import type { Order } from '@/types';
 
 interface AdminTopBarProps {
@@ -46,39 +47,29 @@ export default function AdminTopBar({
   const isOpen = Boolean(config?.is_open);
 
   const fetchPendingOrders = async () => {
-    let foundOrders: Order[] = [];
-    if (isSupabaseConfigured()) {
-      try {
-        const { data, error } = await supabase
-          .from('orders')
-          .select('*')
-          .eq('status', 'PENDING_APPROVAL')
-          .order('created_at', { ascending: false });
-        if (!error && data) {
-          foundOrders = data;
-        }
-      } catch {}
-    } else {
-      try {
-        const local = localStorage.getItem('lah_gabin_admin_orders');
-        if (local) {
-          const parsed: Order[] = JSON.parse(local);
-          foundOrders = parsed.filter((o) => o.status === 'PENDING_APPROVAL');
-        }
-      } catch {}
-    }
-    setPendingOrders(foundOrders);
+    try {
+      const allOrders = await fetchAllOrders();
+      const pending = allOrders.filter((o) => o.status === 'PENDING_APPROVAL');
+      setPendingOrders(pending);
+    } catch {}
   };
 
   useEffect(() => {
     fetchPendingOrders();
-    const interval = setInterval(fetchPendingOrders, 15000);
+    const interval = setInterval(fetchPendingOrders, 5000);
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'lah_gabin_admin_orders') {
+        fetchPendingOrders();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
 
     let channel: any = null;
     if (isSupabaseConfigured()) {
       try {
         channel = supabase
-          .channel('admintopbar-orders-channel')
+          .channel('admintopbar-orders-channel-v2')
           .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'orders' },
@@ -92,6 +83,7 @@ export default function AdminTopBar({
 
     return () => {
       clearInterval(interval);
+      window.removeEventListener('storage', handleStorage);
       if (channel && isSupabaseConfigured()) {
         try {
           supabase.removeChannel(channel);

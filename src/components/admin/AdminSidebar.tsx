@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils';
 import { useStoreConfig } from '@/contexts/StoreContext';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useState, useEffect } from 'react';
+import { fetchAllOrders } from '@/lib/orderStore';
 
 interface AdminSidebarProps {
   mobileOpen?: boolean;
@@ -70,37 +71,29 @@ export default function AdminSidebar({
   const [pendingCount, setPendingCount] = useState(0);
 
   const fetchPendingCount = async () => {
-    if (isSupabaseConfigured()) {
-      try {
-        const { count, error } = await supabase
-          .from('orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'PENDING_APPROVAL');
-        if (!error && count !== null) {
-          setPendingCount(count);
-          return;
-        }
-      } catch {}
-    }
     try {
-      const local = localStorage.getItem('lah_gabin_admin_orders');
-      if (local) {
-        const parsed = JSON.parse(local);
-        const count = parsed.filter((o: any) => o.status === 'PENDING_APPROVAL').length;
-        setPendingCount(count);
-      }
+      const allOrders = await fetchAllOrders();
+      const count = allOrders.filter((o) => o.status === 'PENDING_APPROVAL').length;
+      setPendingCount(count);
     } catch {}
   };
 
   useEffect(() => {
     fetchPendingCount();
-    const interval = setInterval(fetchPendingCount, 15000);
+    const interval = setInterval(fetchPendingCount, 5000);
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'lah_gabin_admin_orders') {
+        fetchPendingCount();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
 
     let channel: any = null;
     if (isSupabaseConfigured()) {
       try {
         channel = supabase
-          .channel('adminsidebar-orders-channel')
+          .channel('adminsidebar-orders-channel-v2')
           .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'orders' },
@@ -114,6 +107,7 @@ export default function AdminSidebar({
 
     return () => {
       clearInterval(interval);
+      window.removeEventListener('storage', handleStorage);
       if (channel && isSupabaseConfigured()) {
         try {
           supabase.removeChannel(channel);
