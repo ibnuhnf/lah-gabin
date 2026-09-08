@@ -1,14 +1,65 @@
 'use client';
 
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { Minus, Plus, Trash2, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Minus, Plus, Trash2, ArrowLeft, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
 import CustomerPageWrapper from '@/components/customer/CustomerPageWrapper';
 import { useCart } from '@/contexts/CartContext';
 import { formatRupiah } from '@/lib/utils';
-import { BAR_VARIANT_LABELS, BarVariant } from '@/types';
+import { BAR_VARIANT_LABELS, BarVariant, Product } from '@/types';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, subtotal, clearCart, setUnitVariant, allVariantsSelected } = useCart();
+  const [stockMap, setStockMap] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    async function loadStocks() {
+      if (isSupabaseConfigured()) {
+        try {
+          const { data } = await supabase.from('products').select('id, stock_quantity');
+          if (data) {
+            const map: Record<string, number> = {};
+            data.forEach((p) => {
+              map[p.id] = Number(p.stock_quantity) || 0;
+            });
+            setStockMap(map);
+            return;
+          }
+        } catch {}
+      }
+      try {
+        const local = localStorage.getItem('lah_gabin_admin_products');
+        if (local) {
+          const parsed = JSON.parse(local);
+          const map: Record<string, number> = {};
+          parsed.forEach((p: any) => {
+            map[p.id] = Number(p.stock_quantity) || 0;
+          });
+          setStockMap(map);
+        }
+      } catch {}
+    }
+    loadStocks();
+  }, []);
+
+  // Hitung total item yang berstatus Pre-Order
+  const { hasPreorder, preorderSummary } = useMemo(() => {
+    let totalPo = 0;
+    const summary: { name: string; ready: number; po: number }[] = [];
+
+    items.forEach((item) => {
+      const currentStock = stockMap[item.product.id] !== undefined ? stockMap[item.product.id] : (Number(item.product.stock_quantity) || 0);
+      const ready = Math.max(0, Math.min(currentStock, item.quantity));
+      const po = Math.max(0, item.quantity - ready);
+      if (po > 0) {
+        totalPo += po;
+        summary.push({ name: item.product.name, ready, po });
+      }
+    });
+
+    return { hasPreorder: totalPo > 0, totalPo, preorderSummary: summary };
+  }, [items, stockMap]);
 
   return (
     <CustomerPageWrapper>
@@ -37,6 +88,10 @@ export default function CartPage() {
             <div className="space-y-3 mb-5">
               {items.map((item) => {
                 const allPicked = item.unitVariants.every((v) => v !== null);
+                const currentStock = stockMap[item.product.id] !== undefined ? stockMap[item.product.id] : (Number(item.product.stock_quantity) || 0);
+                const readyQty = Math.max(0, Math.min(currentStock, item.quantity));
+                const poQty = Math.max(0, item.quantity - readyQty);
+
                 return (
                   <div
                     key={item.product.id}
@@ -63,6 +118,26 @@ export default function CartPage() {
                         <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium mt-0.5">
                           {formatRupiah(item.activePrice)}
                         </p>
+
+                        {/* Status ketersediaan Ready & Pre-Order */}
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px]">
+                          {poQty > 0 ? (
+                            <>
+                              {readyQty > 0 && (
+                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-200/60 dark:border-emerald-800/40">
+                                  <CheckCircle2 size={10} /> {readyQty} Ready
+                                </span>
+                              )}
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 font-semibold border border-amber-200/60 dark:border-amber-800/40">
+                                <Clock size={10} /> {poQty} Pre-Order
+                              </span>
+                            </>
+                          ) : (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-semibold">
+                              <CheckCircle2 size={10} /> Stok Ready
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <div className="flex items-center gap-1.5">
@@ -127,6 +202,19 @@ export default function CartPage() {
                 );
               })}
             </div>
+
+            {/* Banner Pemberitahuan Pre-Order jika pesanan melebihi stok ready */}
+            {hasPreorder && (
+              <div className="flex items-start gap-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-3.5 mb-5 animate-in fade-in">
+                <Clock size={16} className="text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                  <p className="font-bold">Pemberitahuan Pre-Order</p>
+                  <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-400">
+                    Karena pemesanan melebihi stok ready, maka barang yang tidak ready akan disiapkan secara <strong className="font-semibold text-amber-900 dark:text-amber-200">Pre-Order</strong>.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="card p-4 space-y-2 mb-5">
               <div className="flex justify-between text-sm">

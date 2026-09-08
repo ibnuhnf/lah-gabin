@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Tag, ArrowLeft, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Tag, ArrowLeft, ShieldCheck, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import CustomerPageWrapper from '@/components/customer/CustomerPageWrapper';
 import { useCart } from '@/contexts/CartContext';
 import { useStoreConfig } from '@/contexts/StoreContext';
@@ -27,6 +27,7 @@ export default function CheckoutPage() {
   const { config } = useStoreConfig();
   const router = useRouter();
 
+  const [stockMap, setStockMap] = useState<Record<string, number>>({});
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -38,6 +39,62 @@ export default function CheckoutPage() {
   const [voucherLoading, setVoucherLoading] = useState(false);
   const [formError, setFormError] = useState('');
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    async function loadStocks() {
+      if (isSupabaseConfigured()) {
+        try {
+          const { data } = await supabase.from('products').select('id, stock_quantity');
+          if (data) {
+            const map: Record<string, number> = {};
+            data.forEach((p) => {
+              map[p.id] = Number(p.stock_quantity) || 0;
+            });
+            setStockMap(map);
+            return;
+          }
+        } catch {}
+      }
+      try {
+        const local = localStorage.getItem('lah_gabin_admin_products');
+        if (local) {
+          const parsed = JSON.parse(local);
+          const map: Record<string, number> = {};
+          parsed.forEach((p: any) => {
+            map[p.id] = Number(p.stock_quantity) || 0;
+          });
+          setStockMap(map);
+        }
+      } catch {}
+    }
+    loadStocks();
+  }, []);
+
+  // Hitung total Ready vs Pre-Order
+  const { hasPreorder, totalPo, totalReady, preorderItemsSummary } = useMemo(() => {
+    let poCount = 0;
+    let readyCount = 0;
+    const summary: string[] = [];
+
+    items.forEach((item) => {
+      const currentStock = stockMap[item.product.id] !== undefined ? stockMap[item.product.id] : (Number(item.product.stock_quantity) || 0);
+      const ready = Math.max(0, Math.min(currentStock, item.quantity));
+      const po = Math.max(0, item.quantity - ready);
+      readyCount += ready;
+      poCount += po;
+
+      if (po > 0) {
+        summary.push(`${item.product.name} (${ready > 0 ? `${ready} Ready, ` : ''}${po} PO)`);
+      }
+    });
+
+    return {
+      hasPreorder: poCount > 0,
+      totalPo: poCount,
+      totalReady: readyCount,
+      preorderItemsSummary: summary,
+    };
+  }, [items, stockMap]);
 
   const discountAmount = appliedVoucher?.discount ?? 0;
   // Ongkir dihapus dari total karena akan dibicarakan via WhatsApp admin
@@ -93,12 +150,19 @@ export default function CheckoutPage() {
         const createdAt = new Date().toISOString();
         const fullAddress = `${address.trim()} (${ZONE_LABELS[zone]})`;
 
+        // Susun catatan tambahan jika ada porsi Pre-Order
+        let customerNotesFinal = notes.trim();
+        if (hasPreorder) {
+          const poNote = `[STATUS KESIAPAN: ${totalReady} Ready, ${totalPo} Pre-Order | ${preorderItemsSummary.join('; ')}]`;
+          customerNotesFinal = customerNotesFinal ? `${customerNotesFinal} - ${poNote}` : poNote;
+        }
+
         const orderData = {
           id: orderId,
           invoice_code: invoiceCode,
           customer_name: name.trim(),
           customer_wa: normalizedPhone,
-          customer_notes: notes.trim() || null,
+          customer_notes: customerNotesFinal || null,
           customer_address: fullAddress,
           delivery_zone: zone,
           delivery_fee: 0,
@@ -193,43 +257,76 @@ export default function CheckoutPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Banner Peringatan Pre-Order di Checkout */}
+          {hasPreorder && (
+            <div className="flex items-start gap-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-3.5">
+              <Clock size={16} className="text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+              <div className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                <p className="font-bold">Sebagian Pesanan Akan Di-Pre-Order</p>
+                <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-400">
+                  Stok ready saat ini <strong>{totalReady}</strong> unit, sisa <strong>{totalPo}</strong> unit akan disiapkan secara <strong>Pre-Order</strong>.
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="card p-4">
             <h2 className="font-heading font-bold text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">
               Ringkasan Pesanan
             </h2>
             <div className="space-y-2">
-              {items.map((item) => (
-                <div
-                  key={item.product.id}
-                  className="py-2 border-b border-neutral-100 dark:border-neutral-800 last:border-0"
-                >
-                  <div className="flex justify-between items-center text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-neutral-900 dark:text-white text-xs w-6 text-center py-0.5 rounded-md bg-slate-100 dark:bg-neutral-800">
-                        {item.quantity}x
-                      </span>
-                      <span className="text-neutral-800 dark:text-neutral-200 text-sm font-semibold">
-                        {item.product.name}
-                      </span>
-                    </div>
-                    <span className="font-bold text-neutral-900 dark:text-white text-sm">
-                      {formatRupiah(item.activePrice * item.quantity)}
-                    </span>
-                  </div>
-                  {item.unitVariants.length > 0 && (
-                    <div className="pl-8 pt-1 flex flex-wrap gap-1 text-[11px] text-neutral-500 dark:text-neutral-400">
-                      {item.unitVariants.map((v, idx) => (
-                        <span
-                          key={idx}
-                          className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-neutral-800 text-[10px] font-semibold text-neutral-600 dark:text-neutral-300"
-                        >
-                          U{idx + 1}: {v ? BAR_VARIANT_LABELS[v] : '-'}
+              {items.map((item) => {
+                const currentStock = stockMap[item.product.id] !== undefined ? stockMap[item.product.id] : (Number(item.product.stock_quantity) || 0);
+                const readyQty = Math.max(0, Math.min(currentStock, item.quantity));
+                const poQty = Math.max(0, item.quantity - readyQty);
+                return (
+                  <div
+                    key={item.product.id}
+                    className="py-2 border-b border-neutral-100 dark:border-neutral-800 last:border-0"
+                  >
+                    <div className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-neutral-900 dark:text-white text-xs w-6 text-center py-0.5 rounded-md bg-slate-100 dark:bg-neutral-800">
+                          {item.quantity}x
                         </span>
-                      ))}
+                        <span className="text-neutral-800 dark:text-neutral-200 text-sm font-semibold">
+                          {item.product.name}
+                        </span>
+                      </div>
+                      <span className="font-bold text-neutral-900 dark:text-white text-sm">
+                        {formatRupiah(item.activePrice * item.quantity)}
+                      </span>
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    {/* Status Ready / Pre-Order per item */}
+                    {poQty > 0 && (
+                      <div className="pl-8 mt-1 flex flex-wrap items-center gap-1.5 text-[10px]">
+                        {readyQty > 0 && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-200/60 dark:border-emerald-800/40">
+                            <CheckCircle2 size={10} /> {readyQty} Ready
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-semibold border border-amber-200/60 dark:border-amber-800/40">
+                          <Clock size={10} /> {poQty} Pre-Order
+                        </span>
+                      </div>
+                    )}
+
+                    {item.unitVariants.length > 0 && (
+                      <div className="pl-8 pt-1 flex flex-wrap gap-1 text-[11px] text-neutral-500 dark:text-neutral-400">
+                        {item.unitVariants.map((v, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-neutral-800 text-[10px] font-semibold text-neutral-600 dark:text-neutral-300"
+                          >
+                            U{idx + 1}: {v ? BAR_VARIANT_LABELS[v] : '-'}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 

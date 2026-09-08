@@ -97,7 +97,84 @@ export async function createOrder(orderPayload: any, itemsPayload: any[]): Promi
     }
   }
 
-  // 2. Simpan ke Local Storage Cache
+  // 2. Potong Stok Ready & Catat Mutasi Stok (untuk pesanan Online)
+  if (orderPayload.order_source !== 'POS' && itemsPayload && itemsPayload.length > 0) {
+    try {
+      // Ambil data produk saat ini (Supabase atau LocalStorage)
+      let products: any[] = [];
+      if (isSupabaseConfigured()) {
+        const { data: dbProds } = await supabase.from('products').select('*');
+        if (dbProds) products = dbProds;
+      }
+      if (products.length === 0) {
+        try {
+          const local = localStorage.getItem('lah_gabin_admin_products');
+          if (local) products = JSON.parse(local);
+        } catch {}
+      }
+
+      // Group quantity per product_id
+      const qtyMap: Record<string, number> = {};
+      for (const it of itemsPayload) {
+        if (it.product_id) {
+          qtyMap[it.product_id] = (qtyMap[it.product_id] || 0) + (Number(it.quantity) || 1);
+        }
+      }
+
+      // Update produk
+      const updatedProducts = products.map((p) => {
+        const orderQty = qtyMap[p.id];
+        if (orderQty && orderQty > 0) {
+          const currentStock = Number(p.stock_quantity) || 0;
+          const newStock = Math.max(0, currentStock - orderQty);
+          return { ...p, stock_quantity: newStock };
+        }
+        return p;
+      });
+
+      // Simpan perubahan ke local storage
+      try {
+        localStorage.setItem('lah_gabin_admin_products', JSON.stringify(updatedProducts));
+      } catch {}
+
+      // Simpan perubahan dan mutasi ke Supabase
+      if (isSupabaseConfigured()) {
+        for (const [pId, orderedQty] of Object.entries(qtyMap)) {
+          const prod = products.find((p) => p.id === pId);
+          if (prod) {
+            const beforeStock = Number(prod.stock_quantity) || 0;
+            const deduction = Math.min(beforeStock, orderedQty);
+            const afterStock = Math.max(0, beforeStock - orderedQty);
+
+            if (deduction > 0 || beforeStock > 0) {
+              await supabase
+                .from('products')
+                .update({ stock_quantity: afterStock })
+                .eq('id', pId);
+
+              await supabase.from('stock_mutations').insert([
+                {
+                  id: crypto.randomUUID(),
+                  product_id: pId,
+                  type: 'KELUAR_PENJUALAN',
+                  quantity: deduction,
+                  stock_before: beforeStock,
+                  stock_after: afterStock,
+                  reference_id: dbOrderPayload.invoice_code,
+                  notes: `Pesanan Online #${dbOrderPayload.invoice_code} (${dbOrderPayload.customer_name})`,
+                  created_at: new Date().toISOString(),
+                },
+              ]);
+            }
+          }
+        }
+      }
+    } catch (stockErr) {
+      console.warn('Gagal memproses pemotongan stok otomatis:', stockErr);
+    }
+  }
+
+  // 3. Simpan ke Local Storage Cache
   try {
     const fullOrder: Order = {
       ...orderPayload,

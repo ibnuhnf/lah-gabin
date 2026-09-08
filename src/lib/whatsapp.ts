@@ -6,6 +6,13 @@ export function buildWhatsAppURL(order: Order, adminWa: string): string {
     .map((item, i) => `${i + 1}. ${item.product_name} x${item.quantity} = Rp ${item.subtotal.toLocaleString('id-ID')}`)
     .join('\n');
 
+  // Ekstrak informasi status kesiapan Ready/Pre-Order jika ada di catatan
+  const poMatch = (order.customer_notes || '').match(/\[STATUS KESIAPAN:([^\]]+)\]/);
+  const prepStatusLine = poMatch ? `\n*Status Kesiapan:* ${poMatch[1].trim()}` : '';
+
+  // Buang tag STATUS KESIAPAN dari catatan agar tidak redundan
+  const cleanedNotes = (order.customer_notes || '').replace(/\s*\[STATUS KESIAPAN:[^\]]+\]\s*/g, '').trim();
+
   const lines = [
     `Halo Admin Lah Gabin!`,
     ``,
@@ -20,7 +27,8 @@ export function buildWhatsAppURL(order: Order, adminWa: string): string {
     ``,
     order.discount_amount > 0 ? `*Diskon:* Rp ${order.discount_amount.toLocaleString('id-ID')}` : '',
     `*Total Pembayaran:* *Rp ${order.final_amount.toLocaleString('id-ID')}*`,
-    order.customer_notes ? `*Catatan:* ${order.customer_notes}` : '',
+    prepStatusLine,
+    cleanedNotes ? `*Catatan:* ${cleanedNotes}` : '',
     ``,
     `Mohon segera diproses ya. Terima kasih!`,
   ]
