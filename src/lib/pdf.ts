@@ -10,21 +10,50 @@ interface InvoicePDFOptions {
   qrisNote?: string;
 }
 
-async function loadImageAsBase64(url: string): Promise<string> {
-  const res = await fetch(url);
-  const blob = await res.blob();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
+/**
+ * Muat dan kompres gambar background ke format JPEG teroptimasi via canvas
+ * Menghindari raw uncompressed RGBA bitmap di jsPDF yang membuat file membengkak hingga 40MB.
+ */
+async function loadCompressedBg(url: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      // Resolusi A5 cetak tajam (approx 1240 x 1754 px)
+      const targetWidth = 1240;
+      const targetHeight = Math.round((img.naturalHeight / img.naturalWidth) * targetWidth) || 1754;
+      const canvas = document.createElement('canvas');
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(url);
+        return;
+      }
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+      // Kompres ke JPEG kualitas 0.85 (tajam, ukuran ~150KB)
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      resolve(compressedDataUrl);
+    };
+    img.onerror = () => {
+      // Fallback jika gagal muat via canvas
+      resolve(url);
+    };
+    img.src = url;
   });
 }
 
 export async function generateInvoicePDF(options: InvoicePDFOptions): Promise<jsPDF> {
   const { order } = options;
 
-  const doc = new jsPDF({ unit: 'mm', format: 'a5', orientation: 'portrait' });
+  const doc = new jsPDF({
+    unit: 'mm',
+    format: 'a5',
+    orientation: 'portrait',
+    compress: true,
+  });
 
   const pageW = doc.internal.pageSize.getWidth();  // 148mm
   const pageH = doc.internal.pageSize.getHeight(); // 210mm
@@ -34,8 +63,8 @@ export async function generateInvoicePDF(options: InvoicePDFOptions): Promise<js
   //   Header  (INVOICE + logo)  : y = 0   – 38mm   ← JANGAN taruh teks
   //   Konten kosong              : y = 38  – 162mm  ← semua teks di sini
   //   Footer (mascot + teks)    : y = 162 – 210mm  ← JANGAN ganggu
-  const bgData = await loadImageAsBase64('/bg-invoice-fix.png');
-  doc.addImage(bgData, 'PNG', 0, 0, pageW, pageH);
+  const bgData = await loadCompressedBg('/bg-invoice-fix.png');
+  doc.addImage(bgData, 'JPEG', 0, 0, pageW, pageH, undefined, 'FAST');
 
   const FONT = 'courier';
   const margin = 12;
