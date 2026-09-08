@@ -112,6 +112,52 @@ export default function AdminExpensesPage() {
       }
       merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setExpenses(merged);
+
+      // Backfill: pastikan semua expense yang ada tercatat di Buku Kas (jika belum ada)
+      try {
+        const cashList: Array<{
+          id: string;
+          type: 'IN' | 'OUT';
+          amount: number;
+          category: string;
+          description: string;
+          time: string;
+          linked_expense_id?: string;
+        }> = JSON.parse(localStorage.getItem('lah_gabin_cash_transactions') || '[]');
+
+        const existingLinkedIds = new Set(
+          cashList.filter((c) => c.linked_expense_id).map((c) => c.linked_expense_id)
+        );
+
+        const categoryMap: Record<string, string> = {
+          'Bahan Baku': 'BAHAN_BAKU',
+          'Kemasan / Packaging': 'KEMASAN',
+          'Operasional (Gas / Listrik / Air)': 'OPERASIONAL',
+          'Transportasi / Logistik': 'OPERASIONAL',
+          'Marketing / Iklan': 'LAINNYA',
+          'Gaji / Upah': 'LAINNYA',
+          'Lain-lain': 'LAINNYA',
+        };
+
+        let added = false;
+        for (const exp of merged) {
+          if (!existingLinkedIds.has(exp.id)) {
+            cashList.push({
+              id: crypto.randomUUID(),
+              type: 'OUT',
+              amount: exp.amount,
+              category: categoryMap[exp.category] || 'LAINNYA',
+              description: `${exp.category}: ${exp.description}`,
+              time: `${exp.date} 00:00`,
+              linked_expense_id: exp.id,
+            });
+            added = true;
+          }
+        }
+        if (added) {
+          localStorage.setItem('lah_gabin_cash_transactions', JSON.stringify(cashList));
+        }
+      } catch {}
     }
 
     loadExpenses();
@@ -136,6 +182,63 @@ export default function AdminExpensesPage() {
     setExpenses(newList);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newList));
+    } catch {}
+  };
+
+  // Bridge ke Buku Kas: setiap create/update/delete expense auto-create/update/delete OUT cash transaction
+  const syncCashTransaction = (
+    action: 'create' | 'update' | 'delete',
+    expense: ExpenseItem
+  ) => {
+    try {
+      const cashList: Array<{
+        id: string;
+        type: 'IN' | 'OUT';
+        amount: number;
+        category: string;
+        description: string;
+        time: string;
+        linked_expense_id?: string;
+      }> = JSON.parse(localStorage.getItem('lah_gabin_cash_transactions') || '[]');
+
+      const categoryMap: Record<string, string> = {
+        'Bahan Baku': 'BAHAN_BAKU',
+        'Kemasan / Packaging': 'KEMASAN',
+        'Operasional (Gas / Listrik / Air)': 'OPERASIONAL',
+        'Transportasi / Logistik': 'OPERASIONAL',
+        'Marketing / Iklan': 'LAINNYA',
+        'Gaji / Upah': 'LAINNYA',
+        'Lain-lain': 'LAINNYA',
+      };
+      const mappedCategory = categoryMap[expense.category] || 'LAINNYA';
+
+      const idx = cashList.findIndex((c) => c.linked_expense_id === expense.id);
+
+      if (action === 'delete') {
+        if (idx >= 0) {
+          cashList.splice(idx, 1);
+          localStorage.setItem('lah_gabin_cash_transactions', JSON.stringify(cashList));
+        }
+        return;
+      }
+
+      // create or update
+      const tx = {
+        id: idx >= 0 ? cashList[idx].id : crypto.randomUUID(),
+        type: 'OUT' as const,
+        amount: expense.amount,
+        category: mappedCategory,
+        description: `${expense.category}: ${expense.description}`,
+        time: `${expense.date} 00:00`,
+        linked_expense_id: expense.id,
+      };
+
+      if (idx >= 0) {
+        cashList[idx] = tx;
+      } else {
+        cashList.unshift(tx);
+      }
+      localStorage.setItem('lah_gabin_cash_transactions', JSON.stringify(cashList));
     } catch {}
   };
 
@@ -202,6 +305,16 @@ export default function AdminExpensesPage() {
         } catch {}
       }
 
+      // Sync ke Buku Kas: update OUT transaction yang terkait
+      syncCashTransaction('update', {
+        id: editItem.id,
+        date: form.date,
+        category: form.category,
+        amount: numAmount,
+        description: form.description.trim(),
+        created_at: editItem.created_at,
+      });
+
       showNotify('Pengeluaran berhasil diperbarui.');
     } else {
       // Create new
@@ -230,6 +343,9 @@ export default function AdminExpensesPage() {
         } catch {}
       }
 
+      // Sync ke Buku Kas: auto-create OUT transaction
+      syncCashTransaction('create', newItem);
+
       showNotify('Pengeluaran baru berhasil dicatat.');
     }
 
@@ -237,8 +353,15 @@ export default function AdminExpensesPage() {
   };
 
   const handleDelete = async (id: string) => {
+    // Cari item dulu untuk sync sebelum dihapus
+    const deletedItem = expenses.find((e) => e.id === id);
     const updatedList = expenses.filter((e) => e.id !== id);
     persistExpenses(updatedList);
+
+    // Sync ke Buku Kas: hapus OUT transaction terkait
+    if (deletedItem) {
+      syncCashTransaction('delete', deletedItem);
+    }
 
     if (isSupabaseConfigured()) {
       try {
