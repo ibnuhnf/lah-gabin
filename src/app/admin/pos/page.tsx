@@ -61,6 +61,7 @@ export default function AdminPOSPage() {
   const [discountNominal, setDiscountNominal] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [customerName, setCustomerName] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
   const discount = Math.min(Number(discountNominal) || 0, subtotal);
@@ -80,13 +81,141 @@ export default function AdminPOSPage() {
     else setCart((prev) => prev.map((i) => i.productId === productId ? { ...i, quantity: qty } : i));
   };
 
-  const handleSubmit = () => {
-    if (cart.length === 0) return;
-    setSuccessMsg(`Transaksi POS berhasil! Total: ${formatRupiah(total)}`);
-    setCart([]);
-    setDiscountNominal('');
-    setCustomerName('');
-    setTimeout(() => setSuccessMsg(''), 3000);
+  const handleSubmit = async () => {
+    if (cart.length === 0 || submitting) return;
+    setSubmitting(true);
+    try {
+      const invoiceCode = `POS-${Date.now().toString().slice(-8)}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+      const orderId = crypto.randomUUID();
+      const createdAt = new Date().toISOString();
+
+      const orderItems = cart.map((ci) => {
+        const product = products.find((p) => p.id === ci.productId);
+        return {
+          id: crypto.randomUUID(),
+          order_id: orderId,
+          product_id: ci.productId,
+          product_name: ci.name,
+          price_snapshot: ci.price,
+          quantity: ci.quantity,
+          subtotal: ci.price * ci.quantity,
+          created_at: createdAt,
+        };
+      });
+
+      const fullOrder = {
+        id: orderId,
+        invoice_code: invoiceCode,
+        customer_name: customerName.trim() || 'Walk-in POS',
+        customer_wa: null,
+        customer_notes: null,
+        customer_address: 'POS (langsung di kasir)',
+        delivery_zone: 'POS',
+        delivery_fee: 0,
+        total_amount: subtotal,
+        discount_amount: discount,
+        final_amount: total,
+        payment_method: paymentMethod,
+        status: 'SELESAI' as const,
+        voucher_id: null,
+        order_source: 'POS' as const,
+        created_at: createdAt,
+        items: orderItems,
+        order_items: orderItems,
+      };
+
+      // 1) Save order ke localStorage
+      try {
+        const existing = JSON.parse(localStorage.getItem('lah_gabin_admin_orders') || '[]');
+        localStorage.setItem('lah_gabin_admin_orders', JSON.stringify([fullOrder, ...existing]));
+        localStorage.setItem(`lah_gabin_order_${invoiceCode}`, JSON.stringify(fullOrder));
+      } catch {}
+
+      // 2) Catat kas IN
+      try {
+        const existingCash = JSON.parse(localStorage.getItem('lah_gabin_cash_transactions') || '[]');
+        const cashTx = {
+          id: crypto.randomUUID(),
+          type: 'IN' as const,
+          amount: total,
+          category: 'PENJUALAN_POS',
+          description: `Penjualan POS ${invoiceCode}${customerName.trim() ? ` - ${customerName.trim()}` : ''}`,
+          time: new Date().toISOString().replace('T', ' ').slice(0, 16),
+        };
+        localStorage.setItem('lah_gabin_cash_transactions', JSON.stringify([cashTx, ...existingCash]));
+      } catch {}
+
+      // 3) Kurangi stok produk di localStorage
+      try {
+        const savedProducts = JSON.parse(localStorage.getItem('lah_gabin_admin_products') || '[]');
+        const updatedProducts = savedProducts.map((p: Product) => {
+          const cartItem = cart.find((c) => c.productId === p.id);
+          if (cartItem) {
+            return { ...p, stock_quantity: Math.max(0, (p.stock_quantity || 0) - cartItem.quantity) };
+          }
+          return p;
+        });
+        localStorage.setItem('lah_gabin_admin_products', JSON.stringify(updatedProducts));
+        setProducts(updatedProducts);
+      } catch {}
+
+      // 4) Sync ke Supabase jika configured (graceful fallback)
+      if (isSupabaseConfigured()) {
+        try {
+          const orderData = {
+            id: orderId,
+            invoice_code: invoiceCode,
+            customer_name: fullOrder.customer_name,
+            customer_wa: null,
+            customer_notes: null,
+            customer_address: fullOrder.customer_address,
+            delivery_zone: 'POS',
+            delivery_fee: 0,
+            total_amount: subtotal,
+            discount_amount: discount,
+            final_amount: total,
+            payment_method: paymentMethod,
+            status: 'SELESAI',
+            voucher_id: null,
+            order_source: 'POS',
+            created_at: createdAt,
+          };
+          const { data: dbOrder, error: orderError } = await supabase
+            .from('orders')
+            .insert([orderData])
+            .select()
+            .maybeSingle();
+          if (!orderError && dbOrder) {
+            await supabase.from('order_items').insert(orderItems);
+          }
+
+          // Update stok di Supabase juga
+          for (const ci of cart) {
+            const prod = products.find((p) => p.id === ci.productId);
+            if (prod) {
+              await supabase
+                .from('products')
+                .update({ stock_quantity: Math.max(0, (prod.stock_quantity || 0) - ci.quantity) })
+                .eq('id', ci.productId);
+            }
+          }
+        } catch (err) {
+          console.warn('Supabase POS sync fallback:', err);
+        }
+      }
+
+      setSuccessMsg(`Transaksi POS berhasil! Invoice: ${invoiceCode} · Total: ${formatRupiah(total)}`);
+      setCart([]);
+      setDiscountNominal('');
+      setCustomerName('');
+      setTimeout(() => setSuccessMsg(''), 5000);
+    } catch (err) {
+      console.error('POS submit error:', err);
+      setSuccessMsg('Transaksi gagal, coba lagi.');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -205,9 +334,16 @@ export default function AdminPOSPage() {
 
             <button
               onClick={handleSubmit}
-              className="w-full btn-primary text-xs py-2.5"
+              disabled={submitting}
+              className="w-full btn-primary text-xs py-2.5 flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              Selesaikan Transaksi POS
+              {submitting ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" /> Memproses Transaksi...
+                </>
+              ) : (
+                'Selesaikan Transaksi POS'
+              )}
             </button>
           </>
         )}
