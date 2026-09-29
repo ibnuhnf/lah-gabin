@@ -275,7 +275,7 @@ export default function AdminDashboardPage() {
           </p>
         </div>
 
-        <div className="flex bg-slate-100/80 dark:bg-white/[0.04] p-1 rounded-2xl gap-1 border border-slate-200/60 dark:border-white/[0.06]">
+        <div className="flex bg-slate-100/80 dark:bg-white/[0.04] p-1 rounded-lg gap-1 border border-slate-200/60 dark:border-white/[0.06]">
           <button
             onClick={() => setPeriod('today')}
             className={`px-4 py-1.5 text-xs font-semibold rounded-xl transition-all ${
@@ -399,12 +399,12 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Tabel Rencana & Kebutuhan Produksi Gabin (Yang Harus Dibuat) */}
-      <div className="bankzai-card p-5 border-amber-500/20 bg-gradient-to-b from-amber-500/[0.02] to-transparent">
+      <div className="bankzai-card p-5 border-amber-500/20">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-                <ChefHat size={18} />
+              <div className="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                <ChefHat size={16} />
               </div>
               <div>
                 <h2 className="font-heading font-bold text-base text-neutral-900 dark:text-white flex items-center gap-2">
@@ -795,7 +795,7 @@ export default function AdminDashboardPage() {
               activeQueue.slice(0, 4).map((po) => (
                 <div
                   key={po.id || po.invoice_code}
-                  className="p-3 bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.05] rounded-2xl flex items-center justify-between"
+                  className="p-3 bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.05] rounded-lg flex items-center justify-between"
                 >
                   <div className="min-w-0">
                     <p className="font-bold text-xs text-neutral-900 dark:text-white truncate">
@@ -811,7 +811,7 @@ export default function AdminDashboardPage() {
                 </div>
               ))
             ) : (
-              <div className="p-6 text-center text-[11px] text-neutral-400 border border-dashed border-slate-200 dark:border-white/[0.06] rounded-2xl font-medium">
+              <div className="p-6 text-center text-[11px] text-neutral-400 border border-dashed border-slate-200 dark:border-white/[0.06] rounded-lg font-medium">
                 Tidak ada antrean aktif.
               </div>
             )}
@@ -861,7 +861,7 @@ export default function AdminDashboardPage() {
             {criticalStockList.slice(0, 6).map((item) => (
               <div
                 key={item.name}
-                className="p-3.5 bg-rose-50/50 dark:bg-rose-500/[0.06] border border-rose-200/60 dark:border-rose-500/20 rounded-2xl"
+                className="p-3.5 bg-rose-50/50 dark:bg-rose-500/[0.06] border border-rose-200/60 dark:border-rose-500/20 rounded-lg"
               >
                 <p className="font-bold text-xs text-rose-900 dark:text-rose-300">
                   {item.name}
@@ -948,9 +948,9 @@ function ProgressBar({
 }) {
   const pct = Math.min(100, Math.round((value / max) * 100));
   const colors = {
-    blue: 'from-blue-500 to-sky-400',
-    emerald: 'from-emerald-500 to-teal-400',
-    amber: 'from-amber-500 to-orange-400',
+    blue: 'bg-blue-500',
+    emerald: 'bg-emerald-500',
+    amber: 'bg-amber-500',
   };
   return (
     <div>
@@ -964,7 +964,7 @@ function ProgressBar({
       </div>
       <div className="h-2 bg-slate-100 dark:bg-white/[0.06] rounded-full overflow-hidden">
         <div
-          className={`h-full rounded-full bg-gradient-to-r ${colors[color]} transition-all duration-500`}
+          className={`h-full rounded-full ${colors[color]} transition-all duration-300`}
           style={{ width: `${pct}%` }}
         />
       </div>

@@ -95,7 +95,7 @@ export default function AdminLayout({
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] dark:bg-[#06080d]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl border-4 border-slate-200 dark:border-white/[0.08] border-t-blue-600 animate-spin" />
+          <div className="w-8 h-8 rounded-full border-2 border-slate-200 dark:border-white/[0.08] border-t-brand-600 animate-spin" />
           <p className="text-xs font-semibold text-neutral-500">Memverifikasi sesi...</p>
         </div>
       </div>

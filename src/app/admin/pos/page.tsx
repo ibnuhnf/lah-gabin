@@ -215,7 +215,7 @@ export default function AdminPOSPage() {
               <button
                 key={product.id}
                 onClick={() => addToCart(product)}
-                className={`p-4 rounded-2xl border text-left transition-all hover:scale-[1.01] active:scale-[0.98] ${
+                className={`p-4 rounded-lg border text-left transition-all hover:scale-[1.01] active:scale-[0.98] ${
                   inCart
                     ? 'border-accent-500 bg-accent-50/40 dark:bg-accent-950/20'
                     : 'border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900'

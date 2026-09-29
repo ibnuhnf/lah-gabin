@@ -133,7 +133,7 @@ export default function AdminOrdersPage() {
     <div className="space-y-6">
       {/* Toast Notification */}
       {notification && (
-        <div className="fixed top-5 right-5 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 text-sm font-bold animate-in fade-in">
+        <div className="fixed top-5 right-5 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-lg shadow-md flex items-center gap-2 text-sm font-bold animate-in fade-in">
           <CheckCircle2 size={16} />
           {notification}
         </div>
@@ -158,7 +158,7 @@ export default function AdminOrdersPage() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex bg-slate-200/70 dark:bg-neutral-800/80 p-1.5 rounded-2xl gap-1 overflow-x-auto border border-slate-300/40 dark:border-neutral-700/60">
+      <div className="flex bg-slate-200/70 dark:bg-neutral-800/80 p-1.5 rounded-lg gap-1 overflow-x-auto border border-slate-300/40 dark:border-neutral-700/60">
         {[
           { key: 'all', label: 'Semua' },
           { key: 'PENDING_APPROVAL', label: `Menunggu (${pendingCount})` },
@@ -309,9 +309,9 @@ export default function AdminOrdersPage() {
 
       {/* Delete Confirmation Modal */}
       {deleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-neutral-200 dark:border-neutral-800 animate-in fade-in zoom-in-95">
-            <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-xl p-6 w-full max-w-md shadow-lg border border-neutral-200 dark:border-neutral-800 animate-in fade-in duration-150">
+            <div className="w-12 h-12 rounded-lg bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-3">
               <Trash2 size={24} />
             </div>
             <h3 className="font-heading font-bold text-lg text-neutral-900 dark:text-white mb-1">
@@ -324,14 +324,14 @@ export default function AdminOrdersPage() {
               <button
                 type="button"
                 onClick={() => setDeleteModal(null)}
-                className="flex-1 py-2.5 rounded-2xl border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                className="flex-1 py-2.5 rounded-lg border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold hover:bg-neutral-50 dark:hover:bg-neutral-800"
               >
                 Batal
               </button>
               <button
                 type="button"
                 onClick={handleConfirmDelete}
-                className="flex-1 py-2.5 rounded-2xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 shadow-md active:scale-95"
+                className="flex-1 py-2.5 rounded-lg bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 shadow-md active:scale-95"
               >
                 Ya, Hapus
               </button>
@@ -342,8 +342,8 @@ export default function AdminOrdersPage() {
 
       {/* Cancel Modal */}
       {cancelModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-neutral-200 dark:border-neutral-800 animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-xl p-6 w-full max-w-md shadow-lg border border-neutral-200 dark:border-neutral-800 animate-in fade-in duration-150">
             <h3 className="font-heading font-bold text-lg text-neutral-900 dark:text-white mb-1">
               Batalkan Pesanan Customer?
             </h3>
@@ -365,7 +365,7 @@ export default function AdminOrdersPage() {
                   setCancelModal(null);
                   setCancelReason('');
                 }}
-                className="flex-1 py-2.5 rounded-2xl border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold"
+                className="flex-1 py-2.5 rounded-lg border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold"
               >
                 Batal
               </button>
@@ -373,7 +373,7 @@ export default function AdminOrdersPage() {
                 type="button"
                 disabled={!cancelReason.trim()}
                 onClick={handleConfirmCancel}
-                className="flex-1 py-2.5 rounded-2xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 shadow-md disabled:opacity-50"
+                className="flex-1 py-2.5 rounded-lg bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 shadow-md disabled:opacity-50"
               >
                 Konfirmasi Pembatalan
               </button>

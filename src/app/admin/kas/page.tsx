@@ -167,8 +167,8 @@ export default function AdminCashPage() {
     <div className="space-y-6">
       {/* Toast Notification */}
       {notification && (
-        <div className="fixed top-5 right-5 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 text-sm font-bold animate-in fade-in">
-          <CheckCircle2 size={16} />
+        <div className="fixed top-5 right-5 z-50 bg-emerald-600 text-white px-3.5 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm font-bold animate-in fade-in duration-150">
+          <CheckCircle2 size={15} />
           {notification}
         </div>
       )}
@@ -201,41 +201,37 @@ export default function AdminCashPage() {
         </div>
       </div>
 
-      {/* Top Section: My Balance Card + Quick Transfer Form (Bankzai Balance style) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Virtual My Balance Card */}
-        <div className="lg:col-span-7 space-y-4">
-          <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-blue-700 via-blue-600 to-sky-500 p-6 sm:p-7 text-white shadow-xl shadow-blue-500/20">
-            {/* Background geometric accents */}
-            <div className="absolute -right-10 -bottom-10 w-48 h-48 rounded-full bg-white/10 blur-2xl pointer-events-none" />
-            <div className="absolute -left-10 -top-10 w-36 h-36 rounded-full bg-sky-400/20 blur-xl pointer-events-none" />
-
-            <div className="relative z-10 flex flex-col justify-between h-full min-h-[190px]">
+      {/* Top Section: Balance Card + Quick Form */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Real Balance Card - Clean Enterprise Style */}
+        <div className="lg:col-span-7 space-y-3.5">
+          <div className="relative overflow-hidden rounded-xl bg-neutral-900 dark:bg-[#12141a] p-6 text-white border border-neutral-800 shadow-sm">
+            <div className="relative z-10 flex flex-col justify-between h-full min-h-[160px]">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-blue-100">
-                    Saldo Kas Bisnis
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+                    Saldo Kas Operasional
                   </p>
-                  <h2 className="font-heading font-black text-2xl sm:text-3xl mt-1 tracking-tight">
+                  <h2 className="font-heading font-black text-2xl sm:text-3xl mt-1 tracking-tight tabular-nums">
                     {formatRupiah(saldoKas)}
                   </h2>
                 </div>
-                <div className="w-12 h-8 rounded-lg bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center font-heading font-bold text-xs tracking-wider">
-                  LG PAY
+                <div className="px-2.5 py-1 rounded-md bg-white/10 text-white font-mono text-[11px] font-bold tracking-wider">
+                  KAS UTAMA
                 </div>
               </div>
 
               {/* Progress bar */}
-              <div className="my-4">
-                <div className="flex justify-between text-[11px] font-medium text-blue-100 mb-1.5">
+              <div className="my-3">
+                <div className="flex justify-between text-[11px] font-medium text-neutral-400 mb-1.5">
                   <span>Target Kas Operasional</span>
-                  <span className="font-bold">
+                  <span className="font-bold text-white tabular-nums">
                     {Math.min(100, Math.round((saldoKas / 5000000) * 100))}%
                   </span>
                 </div>
-                <div className="h-2 bg-black/20 rounded-full overflow-hidden backdrop-blur-xs">
+                <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-white rounded-full transition-all duration-500"
+                    className="h-full bg-brand-600 rounded-full transition-all duration-300"
                     style={{
                       width: `${Math.min(100, Math.round((saldoKas / 5000000) * 100))}%`,
                     }}
@@ -244,18 +240,18 @@ export default function AdminCashPage() {
               </div>
 
               {/* Card details */}
-              <div className="flex items-center justify-between pt-2 border-t border-white/20 text-xs">
+              <div className="flex items-center justify-between pt-2 border-t border-neutral-800 text-xs">
                 <div>
-                  <p className="text-[10px] text-blue-200 uppercase font-semibold">Pemilik</p>
-                  <p className="font-bold mt-0.5">Lah Gabin Admin</p>
+                  <p className="text-[10px] text-neutral-400 uppercase font-semibold">Entitas</p>
+                  <p className="font-bold mt-0.5 text-neutral-200">Lah Gabin Store</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-blue-200 uppercase font-semibold">Periode</p>
-                  <p className="font-bold mt-0.5">2026/09</p>
+                  <p className="text-[10px] text-neutral-400 uppercase font-semibold">Status</p>
+                  <p className="font-bold mt-0.5 text-emerald-400">Aktif</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] text-blue-200 uppercase font-semibold">No. Kas</p>
-                  <p className="font-mono font-bold mt-0.5">**** 8829</p>
+                  <p className="text-[10px] text-neutral-400 uppercase font-semibold">Kode Rekening</p>
+                  <p className="font-mono font-bold mt-0.5 text-neutral-200">KAS-01</p>
                 </div>
               </div>
             </div>
@@ -387,7 +383,7 @@ export default function AdminCashPage() {
 
       {/* Period Selector */}
       <div className="flex items-center justify-between flex-wrap gap-3 pt-2">
-        <div className="flex bg-slate-100 dark:bg-white/[0.04] p-1 rounded-2xl gap-1 border border-slate-200/60 dark:border-white/[0.06]">
+        <div className="flex bg-slate-100 dark:bg-white/[0.04] p-1 rounded-lg gap-1 border border-slate-200/60 dark:border-white/[0.06]">
           <button
             onClick={() => setPeriod('this_month')}
             className={`px-4 py-1.5 text-xs font-semibold rounded-xl transition-all ${
@@ -534,15 +530,16 @@ export default function AdminCashPage() {
 
       {/* Add Modal */}
       {addModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bankzai-card p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bankzai-card p-6 w-full max-w-md shadow-lg animate-in fade-in duration-150">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-heading font-bold text-base text-neutral-900 dark:text-white">
                 {editId ? 'Edit Transaksi Kas' : 'Catat Transaksi Kas'}
               </h3>
               <button
                 onClick={() => setAddModal(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/[0.05] text-neutral-500 flex items-center justify-center hover:bg-slate-200"
+                aria-label="Tutup"
+                className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/[0.05] text-neutral-500 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-white/[0.08] transition-colors"
               >
                 <X size={16} />
               </button>
@@ -553,10 +550,10 @@ export default function AdminCashPage() {
                 <button
                   type="button"
                   onClick={() => setForm({ ...form, type: 'IN' })}
-                  className={`py-2 rounded-xl text-xs font-bold transition-all ${
+                  className={`py-2 rounded-lg text-xs font-bold transition-colors ${
                     form.type === 'IN'
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'bg-slate-100 dark:bg-white/[0.05] text-neutral-600 dark:text-neutral-300'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-100 dark:bg-white/[0.05] text-neutral-600 dark:text-neutral-300 hover:bg-slate-200'
                   }`}
                 >
                   + Uang Masuk
@@ -564,9 +561,9 @@ export default function AdminCashPage() {
                 <button
                   type="button"
                   onClick={() => setForm({ ...form, type: 'OUT' })}
-                  className={`py-2 rounded-xl text-xs font-bold transition-all ${
+                  className={`py-2 rounded-lg text-xs font-bold transition-colors ${
                     form.type === 'OUT'
-                      ? 'bg-rose-600 text-white shadow-xs'
+                      ? 'bg-rose-600 text-white'
                       : 'bg-slate-100 dark:bg-white/[0.05] text-neutral-600 dark:text-neutral-300'
                   }`}
                 >

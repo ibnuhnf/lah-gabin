@@ -121,10 +121,10 @@ export default function AdminVoucherPage() {
       )}
 
       {deleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-neutral-200 dark:border-neutral-800 animate-in fade-in zoom-in-95">
-            <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-3">
-              <Trash2 size={24} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-xl p-6 w-full max-w-md shadow-lg border border-neutral-200 dark:border-neutral-800 animate-in fade-in duration-150">
+            <div className="w-10 h-10 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-3">
+              <Trash2 size={20} />
             </div>
             <h3 className="font-heading font-bold text-lg text-neutral-900 dark:text-white mb-1">
               Hapus Voucher?
@@ -136,14 +136,14 @@ export default function AdminVoucherPage() {
               <button
                 type="button"
                 onClick={() => setDeleteModal(null)}
-                className="flex-1 py-2.5 rounded-2xl border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                className="flex-1 py-2.5 rounded-lg border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold hover:bg-neutral-50 dark:hover:bg-neutral-800"
               >
                 Batal
               </button>
               <button
                 type="button"
                 onClick={confirmDelete}
-                className="flex-1 py-2.5 rounded-2xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 shadow-md active:scale-95"
+                className="flex-1 py-2.5 rounded-lg bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 shadow-md active:scale-95"
               >
                 Ya, Hapus
               </button>

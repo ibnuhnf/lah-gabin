@@ -491,8 +491,8 @@ export default function AdminStockPage() {
 
       {/* Modal Catat Mutasi Baru */}
       {open && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full max-w-md border border-neutral-200 dark:border-neutral-800">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg w-full max-w-md border border-neutral-200 dark:border-neutral-800">
             <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-neutral-800">
               <h2 className="font-heading font-extrabold text-base text-neutral-900 dark:text-white flex items-center gap-2">
                 <Boxes size={18} /> Catat Mutasi Stok
@@ -594,8 +594,8 @@ export default function AdminStockPage() {
 
       {/* Modal Edit Mutasi */}
       {editingMutation && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full max-w-md border border-neutral-200 dark:border-neutral-800">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg w-full max-w-md border border-neutral-200 dark:border-neutral-800">
             <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-neutral-800">
               <h2 className="font-heading font-extrabold text-base text-neutral-900 dark:text-white flex items-center gap-2">
                 <Pencil size={18} /> Edit Mutasi: {editingMutation.item}

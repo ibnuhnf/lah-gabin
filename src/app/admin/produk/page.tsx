@@ -253,7 +253,7 @@ export default function AdminProductsPage() {
     <div className="space-y-6">
       {/* Toast Notification */}
       {message && (
-        <div className="fixed top-5 right-5 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 text-sm font-medium animate-in fade-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-lg shadow-md flex items-center gap-2 text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-150">
           <Check size={16} />
           {message}
         </div>
@@ -298,7 +298,7 @@ export default function AdminProductsPage() {
                   <tr key={p.id} className="table-row">
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3.5">
-                        <div className="w-12 h-12 rounded-2xl bg-neutral-100 dark:bg-neutral-800 overflow-hidden shrink-0 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-lg bg-neutral-100 dark:bg-neutral-800 overflow-hidden shrink-0 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center">
                           {img ? (
                             <img src={img} alt={p.name} className="w-full h-full object-cover" />
                           ) : (
@@ -362,8 +362,8 @@ export default function AdminProductsPage() {
 
       {/* Edit / Add Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-neutral-900 rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-neutral-200/80 dark:border-neutral-800 animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-neutral-900 rounded-xl p-6 w-full max-w-lg shadow-lg border border-neutral-200/80 dark:border-neutral-800 animate-in fade-in duration-150">
             <div className="flex justify-between items-center mb-5">
               <h3 className="font-heading font-bold text-xl text-neutral-900 dark:text-white">
                 {editProduct ? 'Edit Produk & Foto' : 'Tambah Produk Baru'}
@@ -383,7 +383,7 @@ export default function AdminProductsPage() {
                   Foto Produk
                 </label>
                 <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 rounded-2xl bg-neutral-100 dark:bg-neutral-800 border-2 border-dashed border-neutral-300 dark:border-neutral-700 overflow-hidden flex items-center justify-center shrink-0 relative">
+                  <div className="w-20 h-20 rounded-lg bg-neutral-100 dark:bg-neutral-800 border-2 border-dashed border-neutral-300 dark:border-neutral-700 overflow-hidden flex items-center justify-center shrink-0 relative">
                     {formData.image_url ? (
                       <img src={formData.image_url} alt="Preview" className="w-full h-full object-cover" />
                     ) : (
@@ -492,7 +492,7 @@ export default function AdminProductsPage() {
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="flex-1 py-2.5 rounded-2xl border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-sm font-semibold hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                  className="flex-1 py-2.5 rounded-lg border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-sm font-semibold hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
                 >
                   Batal
                 </button>
@@ -511,8 +511,8 @@ export default function AdminProductsPage() {
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-neutral-200 dark:border-neutral-800 text-center animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-xl p-6 w-full max-w-sm shadow-lg border border-neutral-200 dark:border-neutral-800 text-center animate-in fade-in duration-150">
             <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-600 flex items-center justify-center mx-auto mb-4">
               <AlertCircle size={24} />
             </div>
@@ -525,13 +525,13 @@ export default function AdminProductsPage() {
             <div className="flex gap-2">
               <button
                 onClick={() => setDeleteConfirm(null)}
-                className="flex-1 py-2.5 rounded-2xl border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-semibold"
+                className="flex-1 py-2.5 rounded-lg border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-semibold"
               >
                 Batal
               </button>
               <button
                 onClick={() => handleDelete(deleteConfirm.id)}
-                className="flex-1 py-2.5 rounded-2xl bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700 shadow-md"
+                className="flex-1 py-2.5 rounded-lg bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700 shadow-md"
               >
                 Ya, Hapus
               </button>

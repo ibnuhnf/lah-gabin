@@ -230,13 +230,13 @@ export default function AdminReportsPage() {
         </div>
 
         {/* Laba Bersih Bulan Ini */}
-        <div className="bankzai-card p-5 border-emerald-500/30 bg-gradient-to-br from-emerald-500/[0.04] to-transparent">
+        <div className="bankzai-card p-5 border-emerald-500/30">
           <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
             <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
               Laba Bersih (Net Profit)
             </span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-              <ArrowUpRight size={16} />
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <ArrowUpRight size={15} />
             </div>
           </div>
           <p
@@ -360,7 +360,7 @@ export default function AdminReportsPage() {
               return (
                 <div
                   key={ch.name}
-                  className="p-4 bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.06] rounded-2xl flex flex-col gap-2"
+                  className="p-4 bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.06] rounded-lg flex flex-col gap-2"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">

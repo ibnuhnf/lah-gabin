@@ -288,7 +288,7 @@ export default function AdminExpensesPage() {
     <div className="space-y-6">
       {/* Toast Notification */}
       {notification && (
-        <div className="fixed top-4 right-4 z-50 bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-bold animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="fixed top-4 right-4 z-50 bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 px-3.5 py-2 rounded-lg shadow-lg flex items-center gap-2.5 text-xs font-bold animate-in fade-in slide-in-from-top-2 duration-150">
           <CheckCircle2 size={16} className="text-emerald-400 dark:text-emerald-600" />
           <span>{notification}</span>
         </div>
@@ -487,8 +487,8 @@ export default function AdminExpensesPage() {
 
       {/* Modal Form Tambah / Edit */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-[#12141a] rounded-3xl p-6 w-full max-w-md border border-slate-200/80 dark:border-white/[0.08] shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-[#12141a] rounded-xl p-6 w-full max-w-md border border-slate-200/80 dark:border-white/[0.08] shadow-lg space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/[0.06]">
               <h3 className="font-heading font-bold text-base text-neutral-900 dark:text-white flex items-center gap-2">
                 <Receipt size={18} className="text-rose-500" />
@@ -584,9 +584,9 @@ export default function AdminExpensesPage() {
 
       {/* Modal Konfirmasi Hapus */}
       {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-[#12141a] rounded-3xl p-6 w-full max-w-sm border border-slate-200/80 dark:border-white/[0.08] shadow-2xl text-center space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-500 mx-auto flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-[#12141a] rounded-xl p-6 w-full max-w-sm border border-slate-200/80 dark:border-white/[0.08] shadow-lg text-center space-y-4">
+            <div className="w-10 h-10 rounded-lg bg-rose-500/10 text-rose-500 mx-auto flex items-center justify-center">
               <AlertCircle size={24} />
             </div>
             <div>
