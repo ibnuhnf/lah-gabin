@@ -33,6 +33,9 @@ interface AdminTopBarProps {
   onToggleCollapse?: () => void;
 }
 
+const TOPBAR_BTN =
+  'w-9 h-9 rounded-lg flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600';
+
 export default function AdminTopBar({
   onMobileMenuClick,
   collapsed = false,
@@ -40,10 +43,10 @@ export default function AdminTopBar({
 }: AdminTopBarProps) {
   const { theme, toggleTheme } = useTheme();
   const { config } = useStoreConfig();
-  const [searchOpen, setSearchOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
+  const [adminEmail, setAdminEmail] = useState('');
   const isOpen = Boolean(config?.is_open);
 
   const fetchPendingOrders = async () => {
@@ -56,6 +59,10 @@ export default function AdminTopBar({
 
   useEffect(() => {
     fetchPendingOrders();
+    try {
+      const s = localStorage.getItem('lah_gabin_admin_session');
+      if (s) setAdminEmail(JSON.parse(s).email || '');
+    } catch {}
     const interval = setInterval(fetchPendingOrders, 5000);
 
     const handleStorage = (e: StorageEvent) => {
@@ -105,14 +112,14 @@ export default function AdminTopBar({
   };
 
   return (
-    <header className="sticky top-0 z-30 w-full bg-white/80 dark:bg-[#0b0d12]/90 backdrop-blur-xl border-b border-slate-200/70 dark:border-white/[0.06] transition-colors">
-      <div className="flex items-center justify-between px-4 sm:px-6 h-16">
+    <header className="sticky top-0 z-30 w-full bg-white/90 dark:bg-[#0b0d12]/95 backdrop-blur-md border-b border-slate-200/70 dark:border-white/[0.06] transition-colors">
+      <div className="flex items-center justify-between px-4 sm:px-6 h-14">
         {/* Left Section: Toggle Buttons & Search */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Mobile Drawer Trigger */}
           <button
             onClick={onMobileMenuClick}
-            className="lg:hidden w-9 h-9 rounded-xl flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors"
+            className={`lg:hidden ${TOPBAR_BTN}`}
             aria-label="Buka Menu Mobile"
           >
             <Menu size={18} />
@@ -122,7 +129,7 @@ export default function AdminTopBar({
           {onToggleCollapse && (
             <button
               onClick={onToggleCollapse}
-              className="hidden lg:flex w-9 h-9 rounded-xl items-center justify-center text-neutral-600 dark:text-neutral-300 hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors"
+              className={`hidden lg:flex ${TOPBAR_BTN}`}
               title={collapsed ? 'Perluas Sidebar' : 'Kecilkan Sidebar'}
               aria-label="Toggle Sidebar"
             >
@@ -132,34 +139,29 @@ export default function AdminTopBar({
 
           {/* Search Bar */}
           <div className="hidden md:flex items-center relative">
+            <label htmlFor="admin-topbar-search" className="sr-only">
+              Cari pesanan atau produk
+            </label>
             <Search
-              size={16}
-              className="absolute left-3.5 text-neutral-400 dark:text-neutral-500 pointer-events-none"
+              size={15}
+              className="absolute left-3 text-neutral-400 pointer-events-none"
+              aria-hidden="true"
             />
             <input
+              id="admin-topbar-search"
               type="search"
               placeholder="Cari pesanan, produk, atau menu…"
-              onFocus={() => setSearchOpen(true)}
-              onBlur={() => setSearchOpen(false)}
-              className="w-[280px] lg:w-[380px] pl-10 pr-4 py-2 bg-slate-100 dark:bg-white/[0.04] border border-transparent dark:border-white/[0.06] rounded-xl text-sm text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:bg-white dark:focus:bg-[#12141a] focus:border-blue-500/30 transition-all"
+              className="w-[260px] lg:w-[320px] pl-9 pr-3 py-1.5 bg-slate-100 dark:bg-white/[0.04] border border-transparent dark:border-white/[0.06] rounded-lg text-xs text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-brand-600/40 focus:bg-white dark:focus:bg-[#12141a] transition-all"
             />
           </div>
         </div>
 
         {/* Right Section */}
-        <div className="flex items-center gap-2">
-          {/* Search trigger (mobile) */}
-          <button
-            className="md:hidden w-9 h-9 rounded-xl flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
-            aria-label="Cari"
-          >
-            <Search size={18} />
-          </button>
-
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Store Status Indicator */}
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-white/[0.05] rounded-full border border-slate-200/70 dark:border-white/[0.06]">
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-slate-100 dark:bg-white/[0.05] rounded-full border border-slate-200/70 dark:border-white/[0.06]">
             <span
-              className={`w-2 h-2 rounded-full ${isOpen ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-rose-500'}`}
+              className={`w-2 h-2 rounded-full ${isOpen ? 'bg-emerald-500' : 'bg-rose-500'}`}
             />
             <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
               {isOpen ? 'Toko Buka' : 'Toko Tutup'}
@@ -171,9 +173,9 @@ export default function AdminTopBar({
             onClick={toggleTheme}
             aria-label="Toggle Theme"
             title={theme === 'dark' ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors"
+            className={TOPBAR_BTN}
           >
-            {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
 
           {/* Notifications Dropdown */}
@@ -183,12 +185,13 @@ export default function AdminTopBar({
                 setNotifOpen(!notifOpen);
                 setProfileOpen(false);
               }}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors relative"
+              className={`${TOPBAR_BTN} relative`}
               aria-label="Notifikasi"
+              aria-expanded={notifOpen}
             >
-              <Bell size={17} />
+              <Bell size={16} />
               {pendingOrders.length > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white font-black text-[10px] rounded-full ring-2 ring-white dark:ring-[#0b0d12] flex items-center justify-center animate-pulse shadow-sm">
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white font-black text-[10px] rounded-full ring-2 ring-white dark:ring-[#0b0d12] flex items-center justify-center tabular-nums shadow-xs">
                   {pendingOrders.length > 9 ? '9+' : pendingOrders.length}
                 </span>
               )}
@@ -199,26 +202,26 @@ export default function AdminTopBar({
                   className="fixed inset-0 z-10"
                   onClick={() => setNotifOpen(false)}
                 />
-                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-[#12141a] rounded-2xl border border-slate-200/70 dark:border-white/[0.08] shadow-2xl z-20 overflow-hidden animate-in fade-in zoom-in-95">
-                  <div className="p-4 border-b border-slate-100 dark:border-white/[0.05] flex items-center justify-between">
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-[#12141a] rounded-xl border border-slate-200/70 dark:border-white/[0.08] shadow-lg z-20 overflow-hidden animate-in fade-in duration-150">
+                  <div className="p-3.5 border-b border-slate-100 dark:border-white/[0.05] flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-heading font-bold text-sm text-neutral-900 dark:text-white">
+                      <h3 className="font-heading font-bold text-xs text-neutral-900 dark:text-white">
                         Notifikasi
                       </h3>
                       {pendingOrders.length > 0 && (
-                        <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 font-extrabold text-[10px]">
-                          {pendingOrders.length} Menunggu Konfirmasi
+                        <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold text-[10px] tabular-nums">
+                          {pendingOrders.length} Menunggu
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <div className="max-h-[340px] overflow-y-auto divide-y divide-slate-100 dark:divide-white/[0.04]">
+                  <div className="max-h-[300px] overflow-y-auto divide-y divide-slate-100 dark:divide-white/[0.04]">
                     {pendingOrders.length === 0 ? (
-                      <div className="p-8 text-center flex flex-col items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
-                        <CheckCircle2 size={24} className="text-emerald-500 opacity-80" />
+                      <div className="p-6 text-center flex flex-col items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+                        <CheckCircle2 size={20} className="text-emerald-500 opacity-80" />
                         <p className="font-semibold">Semua pesanan telah dikonfirmasi</p>
-                        <p className="text-[11px] text-neutral-400">Belum ada pesanan baru yang membutuhkan tindakan.</p>
+                        <p className="text-[11px] text-neutral-400">Belum ada pesanan baru.</p>
                       </div>
                     ) : (
                       pendingOrders.map((order) => (
@@ -226,22 +229,22 @@ export default function AdminTopBar({
                           key={order.id || order.invoice_code}
                           href="/admin/pesanan"
                           onClick={() => setNotifOpen(false)}
-                          className="p-3.5 flex items-start gap-3 hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors group block"
+                          className="p-3 flex items-start gap-2.5 hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors group block"
                         >
-                          <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
-                            <Clock size={16} />
+                          <div className="w-7 h-7 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                            <Clock size={14} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-1">
                               <p className="text-xs font-bold text-neutral-900 dark:text-white truncate">
                                 {order.customer_name || 'Pelanggan'}
                               </p>
-                              <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400 shrink-0">
+                              <span className="text-[10px] font-mono font-bold text-brand-600 dark:text-brand-400 shrink-0">
                                 {order.invoice_code}
                               </span>
                             </div>
                             <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
-                              Total: <span className="font-bold text-neutral-800 dark:text-neutral-200">{formatRupiah(order.final_amount)}</span>
+                              Total: <span className="font-bold text-neutral-800 dark:text-neutral-200 tabular-nums">{formatRupiah(order.final_amount)}</span>
                             </p>
                             <p className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1 group-hover:underline">
                               Perlu konfirmasi admin <ArrowRight size={10} />
@@ -253,13 +256,13 @@ export default function AdminTopBar({
                   </div>
 
                   {pendingOrders.length > 0 && (
-                    <div className="p-2.5 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-100 dark:border-white/[0.05]">
+                    <div className="p-2 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-100 dark:border-white/[0.05]">
                       <Link
                         href="/admin/pesanan"
                         onClick={() => setNotifOpen(false)}
-                        className="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+                        className="w-full py-1.5 px-3 rounded-lg bg-brand-600 hover:bg-accent-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-xs"
                       >
-                        <ClipboardCheck size={14} /> Kelola Pesanan Masuk
+                        <ClipboardCheck size={14} /> Kelola Pesanan
                       </Link>
                     </div>
                   )}
@@ -275,20 +278,22 @@ export default function AdminTopBar({
                 setProfileOpen(!profileOpen);
                 setNotifOpen(false);
               }}
-              className="flex items-center gap-2.5 pl-2.5 pr-2 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors"
+              className="flex items-center gap-2 pl-2 pr-1.5 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+              aria-label="Menu Profil"
+              aria-expanded={profileOpen}
             >
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center text-white font-heading font-bold text-sm shadow-xs">
+              <div className="w-7 h-7 rounded-md bg-brand-600 flex items-center justify-center text-white font-heading font-bold text-xs shadow-xs">
                 A
               </div>
               <div className="hidden sm:block text-left">
                 <p className="text-xs font-bold text-neutral-700 dark:text-neutral-200 leading-tight">
                   Admin
                 </p>
-                <p className="text-[10px] text-neutral-500 dark:text-neutral-500 font-medium leading-tight">
+                <p className="text-[10px] text-neutral-500 font-medium leading-tight">
                   Super User
                 </p>
               </div>
-              <ChevronDown size={14} className="text-neutral-500 hidden sm:block" />
+              <ChevronDown size={13} className="text-neutral-500 hidden sm:block" />
             </button>
             {profileOpen && (
               <>
@@ -296,31 +301,31 @@ export default function AdminTopBar({
                   className="fixed inset-0 z-10"
                   onClick={() => setProfileOpen(false)}
                 />
-                <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-[#12141a] rounded-2xl border border-slate-200/70 dark:border-white/[0.08] shadow-xl z-20 overflow-hidden">
-                  <div className="p-4 border-b border-slate-100 dark:border-white/[0.05]">
-                    <p className="font-heading font-bold text-sm text-neutral-900 dark:text-white">
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#12141a] rounded-xl border border-slate-200/70 dark:border-white/[0.08] shadow-lg z-20 overflow-hidden animate-in fade-in duration-150">
+                  <div className="p-3 border-b border-slate-100 dark:border-white/[0.05]">
+                    <p className="font-heading font-bold text-xs text-neutral-900 dark:text-white">
                       Admin Lah Gabin
                     </p>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                      admin@lahgabin.id
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                      {adminEmail || 'Super User'}
                     </p>
                   </div>
-                  <div className="py-1.5">
-                    <DropdownItem href="/admin/dashboard" icon={<User size={14} />}>
+                  <div className="py-1">
+                    <DropdownItem href="/admin/dashboard" icon={<User size={13} />}>
                       Dashboard
                     </DropdownItem>
-                    <DropdownItem href="/admin/pesanan" icon={<Globe size={14} />}>
+                    <DropdownItem href="/admin/pesanan" icon={<Globe size={13} />}>
                       Pesanan Online
                     </DropdownItem>
-                    <DropdownItem href="/admin/produk" icon={<Settings size={14} />}>
+                    <DropdownItem href="/admin/produk" icon={<Settings size={13} />}>
                       Pengaturan Produk
                     </DropdownItem>
                   </div>
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors border-t border-slate-100 dark:border-white/[0.05]"
+                    className="w-full flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors border-t border-slate-100 dark:border-white/[0.05]"
                   >
-                    <LogOut size={14} /> Keluar (Log Out)
+                    <LogOut size={13} /> Keluar (Log Out)
                   </button>
                 </div>
               </>
@@ -329,46 +334,6 @@ export default function AdminTopBar({
         </div>
       </div>
     </header>
-  );
-}
-
-function NotifItem({
-  icon,
-  title,
-  desc,
-  time,
-  tone,
-}: {
-  icon: string;
-  title: string;
-  desc: string;
-  time: string;
-  tone: 'blue' | 'amber' | 'emerald';
-}) {
-  const tones = {
-    blue: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-    amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-    emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  };
-  return (
-    <div className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/[0.03] cursor-pointer transition-colors">
-      <div className="flex items-start gap-3">
-        <div
-          className={`w-9 h-9 rounded-xl flex items-center justify-center text-base shrink-0 ${tones[tone]}`}
-        >
-          {icon}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold text-neutral-900 dark:text-white">{title}</p>
-          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-1">
-            {desc}
-          </p>
-          <p className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-1 font-mono">
-            {time}
-          </p>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -384,7 +349,7 @@ function DropdownItem({
   return (
     <Link
       href={href}
-      className="flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-slate-50 dark:hover:bg-white/[0.05] transition-colors"
+      className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-slate-50 dark:hover:bg-white/[0.05] transition-colors"
     >
       <span className="text-neutral-400">{icon}</span>
       {children}

@@ -3,36 +3,67 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-brand-950: #0B132B;
-  --color-brand-900: #0F172A;
-  --color-brand-800: #1E293B;
-  --color-brand-700: #334155;
-  --color-brand-600: #2563EB;
-  --color-brand-500: #3B82F6;
-  --color-brand-100: #E0E7FF;
-  --color-brand-50: #F8FAFC;
+  --color-brand-950: oklch(0.14 0.04 265);
+  --color-brand-900: oklch(0.20 0.05 265);
+  --color-brand-800: oklch(0.26 0.06 255);
+  --color-brand-700: oklch(0.32 0.06 250);
+  --color-brand-600: oklch(0.55 0.20 260);
+  --color-brand-500: oklch(0.62 0.18 258);
+  --color-brand-100: oklch(0.92 0.04 265);
+  --color-brand-50: oklch(0.98 0.01 260);
 
-  --color-accent-500: #2563EB;
-  --color-accent-600: #1D4ED8;
-  --color-accent-400: #60A5FA;
-  --color-warning-500: #EAB308;
-  --color-success-500: #10B981;
-  --color-danger-500: #EF4444;
+  --color-accent-500: oklch(0.55 0.20 260);
+  --color-accent-600: oklch(0.48 0.20 260);
+  --color-accent-400: oklch(0.68 0.14 255);
+  --color-warning-500: oklch(0.80 0.16 85);
+  --color-success-500: oklch(0.65 0.15 155);
+  --color-danger-500: oklch(0.60 0.22 25);
 
-  --color-neutral-50: #F8FAFC;
-  --color-neutral-100: #F1F5F9;
-  --color-neutral-200: #E2E8F0;
-  --color-neutral-300: #CBD5E1;
-  --color-neutral-400: #94A3B1;
-  --color-neutral-500: #64748B;
-  --color-neutral-600: #475569;
-  --color-neutral-700: #334155;
-  --color-neutral-800: #1E293B;
-  --color-neutral-900: #0F172A;
-  --color-neutral-950: #020617;
+  --color-neutral-50: oklch(0.98 0.01 260);
+  --color-neutral-100: oklch(0.96 0.01 260);
+  --color-neutral-200: oklch(0.92 0.01 260);
+  --color-neutral-300: oklch(0.87 0.02 260);
+  --color-neutral-400: oklch(0.72 0.03 260);
+  --color-neutral-500: oklch(0.60 0.04 255);
+  --color-neutral-600: oklch(0.48 0.05 255);
+  --color-neutral-700: oklch(0.38 0.05 255);
+  --color-neutral-800: oklch(0.26 0.05 260);
+  --color-neutral-900: oklch(0.20 0.05 265);
+  --color-neutral-950: oklch(0.14 0.04 265);
+
+  /* Semantic surface tokens — single accent, 90% neutral / 10% accent */
+  --color-background: oklch(0.98 0.01 260);
+  --color-surface: oklch(1 0 0);
+  --color-surface-hover: oklch(0.97 0.01 260);
+  --color-surface-active: oklch(0.95 0.01 260);
+  --color-surface-border: rgba(0, 0, 0, 0.06);
+  --color-surface-border-hover: rgba(0, 0, 0, 0.10);
+  --color-surface-border-subtle: rgba(0, 0, 0, 0.04);
+  --color-ink: oklch(0.20 0.05 265);
+  --color-ink-secondary: oklch(0.48 0.05 255);
+  --color-ink-muted: oklch(0.60 0.04 255);
+  --color-primary: oklch(0.55 0.20 260);
+  --color-primary-hover: oklch(0.48 0.20 260);
+  --color-primary-contrast: oklch(1 0 0);
+  --color-success: oklch(0.65 0.15 155);
+  --color-success-bg: oklch(0.96 0.04 155);
+  --color-warning: oklch(0.80 0.16 85);
+  --color-warning-bg: oklch(0.97 0.05 85);
+  --color-danger: oklch(0.60 0.22 25);
+  --color-danger-bg: oklch(0.97 0.04 25);
 
   --font-sans: var(--font-sans-body), -apple-system, BlinkMacSystemFont, "SF Pro Text", "Plus Jakarta Sans", Roboto, sans-serif;
   --font-heading: var(--font-montserrat), -apple-system, BlinkMacSystemFont, "SF Pro Display", Montserrat, sans-serif;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 1px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.06), 0 4px 8px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.08), 0 8px 16px rgba(0, 0, 0, 0.06);
 }
 
 :root {
@@ -43,6 +74,16 @@
 
 .dark {
   color-scheme: dark;
+  --color-background: oklch(0.14 0.04 265);
+  --color-surface: oklch(0.16 0.03 265);
+  --color-surface-hover: oklch(0.20 0.04 265);
+  --color-surface-active: oklch(0.23 0.04 265);
+  --color-surface-border: rgba(255, 255, 255, 0.08);
+  --color-surface-border-hover: rgba(255, 255, 255, 0.12);
+  --color-surface-border-subtle: rgba(255, 255, 255, 0.05);
+  --color-ink: oklch(0.96 0.01 260);
+  --color-ink-secondary: oklch(0.72 0.03 260);
+  --color-ink-muted: oklch(0.60 0.04 255);
 }
 
 * {
@@ -55,54 +96,56 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: -0.012em;
-  background-color: #F8FAFC;
-  color: #0F172A;
+  background-color: var(--color-background);
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
 }
 
 .dark body {
-  background-color: #020617;
-  color: #F1F5F9;
+  background-color: var(--color-background);
+  color: var(--color-ink);
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
   letter-spacing: -0.025em;
   font-weight: 700;
+  line-height: 1.1;
 }
 
-/* Apple iOS Glass Surface */
+/* Glass — controlled: single instance only, blur 12px max */
 .ios-glass {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-surface-border);
 }
 
 .dark .ios-glass {
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(30, 41, 59, 0.8);
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-surface-border);
 }
 
-/* Blue Gradient Primary Button */
+/* Primary button — flat single accent, no gradient (anti-slop #1) */
 .btn-primary {
-  @apply bg-gradient-to-r from-blue-600 to-sky-500 text-white font-semibold px-5 py-2.5 rounded-2xl
-         hover:from-blue-700 hover:to-sky-600 active:scale-[0.98] transition-all duration-150
-         shadow-md shadow-blue-500/25 disabled:opacity-40 disabled:cursor-not-allowed
+  @apply bg-brand-600 text-white font-semibold px-6 py-2.5 rounded-lg
+         hover:bg-accent-600 active:scale-[0.98] transition-all duration-150
+         shadow-sm disabled:opacity-40 disabled:cursor-not-allowed
          flex items-center justify-center gap-2 font-heading tracking-tight;
 }
 
 .btn-secondary {
-  @apply bg-white dark:bg-neutral-800/90 text-neutral-800 dark:text-neutral-200 font-semibold px-4 py-2 rounded-2xl
+  @apply bg-white dark:bg-neutral-800/90 text-neutral-800 dark:text-neutral-200 font-semibold px-4 py-2 rounded-lg
          hover:bg-neutral-50 dark:hover:bg-neutral-700 active:scale-[0.98] transition-all duration-150 border border-neutral-200/80 dark:border-neutral-700/80 shadow-xs font-heading tracking-tight;
 }
 
 .card {
-  @apply bg-white dark:bg-neutral-900 rounded-3xl border border-slate-200/70 dark:border-neutral-800/80 shadow-sm shadow-slate-100 dark:shadow-none transition-all;
+  @apply bg-white dark:bg-neutral-900 rounded-xl border border-slate-200/70 dark:border-neutral-800/80 shadow-sm transition-all;
 }
 
-/* Badges */
+/* Badges — ok: status tokens only */
 .badge-ready {
   @apply bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 text-xs font-bold px-2.5 py-0.5 rounded-full;
 }
@@ -127,23 +170,22 @@ h1, h2, h3, h4, h5, h6 {
   @apply bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/60 text-xs font-bold px-2.5 py-0.5 rounded-full;
 }
 
-/* Admin Sidebar */
 .admin-sidebar {
   @apply bg-neutral-950 dark:bg-black text-white min-h-screen w-64 flex flex-col border-r border-neutral-800;
 }
 
 .admin-sidebar-link {
   @apply flex items-center gap-3 px-3.5 py-2.5 text-neutral-400
-         hover:bg-neutral-900 hover:text-white rounded-xl mx-2 transition-all duration-150 active:scale-[0.98];
+         hover:bg-neutral-900 hover:text-white rounded-lg mx-2 transition-all duration-150 active:scale-[0.98];
 }
 
 .admin-sidebar-link-active {
-  @apply bg-blue-600 text-white font-medium shadow-xs;
+  @apply bg-brand-600 text-white font-medium shadow-xs;
 }
 
 .input-field {
-  @apply w-full px-4 py-2.5 bg-white dark:bg-neutral-800/60 border border-slate-200 dark:border-neutral-700 rounded-2xl
-         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+  @apply w-full px-4 py-2.5 bg-white dark:bg-neutral-800/60 border border-slate-200 dark:border-neutral-700 rounded-lg
+         focus:outline-none focus:ring-2 focus:ring-brand-600/40 focus:border-transparent
          text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 transition-all text-xs sm:text-sm;
 }
 
@@ -156,22 +198,24 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .kpi-card {
-  @apply bg-white dark:bg-neutral-900 rounded-3xl p-5 shadow-sm border border-slate-200/70 dark:border-neutral-800/80 transition-all;
+  @apply bg-white dark:bg-neutral-900 rounded-xl p-5 shadow-sm border border-slate-200/70 dark:border-neutral-800/80 transition-all;
 }
 
 .qty-stepper-btn {
-  @apply w-8 h-8 flex items-center justify-center rounded-xl
+  @apply w-8 h-8 flex items-center justify-center rounded-lg
          bg-slate-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-slate-200 dark:hover:bg-neutral-700
          transition-colors font-medium text-xs;
+  min-width: 32px;
+  min-height: 32px;
 }
 
-/* Bankzai Custom Card & UI Styles */
+/* Unified card — rounded-xl max */
 .bankzai-card {
-  @apply bg-white dark:bg-[#12141a] rounded-[24px] border border-slate-200/80 dark:border-white/[0.08] shadow-sm shadow-slate-200/40 dark:shadow-none transition-all;
+  @apply bg-white dark:bg-[#12141a] rounded-xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm transition-all;
 }
 
 .bankzai-stat-card {
-  @apply bg-white dark:bg-[#12141a] rounded-[22px] p-5 border border-slate-200/80 dark:border-white/[0.08] relative overflow-hidden transition-all hover:border-blue-500/30 hover:shadow-md;
+  @apply bg-white dark:bg-[#12141a] rounded-xl p-5 border border-slate-200/80 dark:border-white/[0.08] relative overflow-hidden transition-all hover:border-brand-600/20 hover:shadow-sm;
 }
 
 .bankzai-badge {
@@ -194,6 +238,16 @@ h1, h2, h3, h4, h5, h6 {
   @apply bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20;
 }
 
+/* Motion: reduced-motion kill switch */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 5px;
@@ -207,4 +261,3 @@ h1, h2, h3, h4, h5, h6 {
 ::-webkit-scrollbar-thumb {
   @apply bg-neutral-300 dark:bg-neutral-700 rounded-full hover:bg-neutral-400 dark:hover:bg-neutral-600;
 }
-

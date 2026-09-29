@@ -4,7 +4,7 @@ import { Product } from '@/types';
 import { formatRupiah, getActivePrice, getStockLabel } from '@/lib/utils';
 import { useCart } from '@/contexts/CartContext';
 import { useStoreConfig } from '@/contexts/StoreContext';
-import { Plus, Image as ImageIcon } from 'lucide-react';
+import { Plus, Image as ImageIcon, Check } from 'lucide-react';
 import { useState } from 'react';
 
 interface ProductCardProps {
@@ -37,14 +37,14 @@ export default function ProductCard({ product }: ProductCardProps) {
   };
 
   return (
-    <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-slate-200/80 dark:border-neutral-800/80 overflow-hidden flex flex-col hover:shadow-lg hover:shadow-blue-500/5 dark:hover:border-neutral-700 transition-all duration-200 group">
+    <div className="bg-white dark:bg-neutral-900 rounded-xl border border-slate-200/80 dark:border-neutral-800/80 overflow-hidden flex flex-col hover:border-slate-300 dark:hover:border-neutral-700 transition-all duration-150 group">
       {/* Image Area */}
       <div className="relative aspect-square bg-slate-100 dark:bg-neutral-800/80 overflow-hidden flex items-center justify-center">
         {imgSrc && imgSrc !== '/placeholder-gabin.jpg' ? (
           <img
             src={imgSrc}
             alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
             loading="lazy"
           />
         ) : (
@@ -57,10 +57,10 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Status Badge */}
         {stockLabel !== 'inactive' && (
           <span
-            className={`absolute top-2.5 left-2.5 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider backdrop-blur-md shadow-xs ${
+            className={`absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${
               stockLabel === 'ready'
-                ? 'bg-emerald-600/90 text-white'
-                : 'bg-amber-600/90 text-white'
+                ? 'bg-emerald-600/95 text-white'
+                : 'bg-amber-600/95 text-white'
             }`}
           >
             {stockLabel === 'ready' ? 'Ready' : 'Pre-Order'}
@@ -69,14 +69,14 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Promo Tag */}
         {hasDiscount && (
-          <span className="absolute top-2.5 right-2.5 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-600 text-white shadow-sm">
+          <span className="absolute top-2 right-2 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-rose-600 text-white">
             PROMO
           </span>
         )}
 
         {/* Box Sisa Stok di dalam kotak gambar tepat di atas nama produk */}
         {stockLabel === 'ready' && (
-          <div className="absolute bottom-2 left-2.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-900/85 dark:bg-black/85 backdrop-blur-md text-white text-[11px] font-bold border border-white/15 shadow-sm">
+          <div className="absolute bottom-2 left-2 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-slate-900/85 dark:bg-black/85 text-white text-[11px] font-bold border border-white/15">
             <span className="text-slate-300 dark:text-neutral-300 font-medium text-[10px]">Sisa Stok :</span>
             <span className="text-emerald-400 font-extrabold">{product.stock_quantity ?? 0}</span>
           </div>
@@ -84,7 +84,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       </div>
 
       {/* Info Area */}
-      <div className="p-3.5 flex flex-col flex-1 gap-1.5">
+      <div className="p-3 flex flex-col flex-1 gap-1.5">
         <div>
           <h3 className="font-heading font-bold text-xs sm:text-sm text-neutral-900 dark:text-white line-clamp-1 tracking-tight">
             {product.name}
@@ -94,13 +94,13 @@ export default function ProductCard({ product }: ProductCardProps) {
           </p>
         </div>
 
-        <div className="mt-auto pt-2.5 flex items-center justify-between gap-1 border-t border-slate-100 dark:border-neutral-800/80">
+        <div className="mt-auto pt-2 flex items-center justify-between gap-1 border-t border-slate-100 dark:border-neutral-800/80">
           <div className="flex flex-col leading-tight">
-            <span className="font-heading font-extrabold text-neutral-900 dark:text-white text-sm">
+            <span className="font-heading font-extrabold text-neutral-900 dark:text-white text-sm tabular-nums">
               {formatRupiah(price)}
             </span>
             {hasDiscount && (
-              <span className="text-[10px] text-neutral-400 line-through">
+              <span className="text-[10px] text-neutral-400 line-through tabular-nums">
                 {formatRupiah(product.base_price)}
               </span>
             )}
@@ -109,15 +109,13 @@ export default function ProductCard({ product }: ProductCardProps) {
           <button
             disabled={!canOrder}
             onClick={handleAdd}
-            className={`w-8 h-8 rounded-xl text-white flex items-center justify-center transition-all active:scale-90 shadow-md ${
-              adding
-                ? 'bg-emerald-600 scale-105'
-                : 'bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 shadow-blue-500/20'
-            } ${!canOrder ? 'opacity-30 cursor-not-allowed bg-neutral-400 shadow-none' : ''}`}
+            className={`w-9 h-9 rounded-lg text-white flex items-center justify-center transition-all active:scale-95 shadow-sm ${
+              adding ? 'bg-emerald-600' : 'bg-brand-600 hover:bg-accent-600'
+            } ${!canOrder ? 'opacity-40 cursor-not-allowed bg-neutral-400 shadow-none' : ''}`}
             title={isShopClosed ? 'Toko tutup' : canOrder ? 'Tambah' : 'Stok habis'}
             aria-label="Tambah ke Keranjang"
           >
-            {adding ? <span className="text-xs">✓</span> : <Plus size={15} strokeWidth={2.5} />}
+            {adding ? <Check size={15} strokeWidth={2.5} /> : <Plus size={15} strokeWidth={2.5} />}
           </button>
         </div>
       </div>

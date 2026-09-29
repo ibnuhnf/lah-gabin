@@ -7,7 +7,6 @@ import {
   ShoppingBag,
   ClipboardCheck,
   Package,
-  FlaskConical,
   Boxes,
   Receipt,
   Wallet,
@@ -134,18 +133,18 @@ export default function AdminSidebar({
         {/* Brand Logo Header */}
         <div
           className={cn(
-            'py-5 border-b border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between transition-all',
+            'py-4 border-b border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between transition-all',
             collapsed ? 'px-3 justify-center' : 'px-5'
           )}
         >
           <Link
             href="/admin/dashboard"
-            className="flex items-center gap-3 group overflow-hidden"
+            className="flex items-center gap-3 group overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 rounded-lg"
           >
             <img
               src="/img/logo.svg"
               alt="Lah Gabin Logo"
-              className="w-10 h-10 rounded-2xl object-contain shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform shrink-0"
+              className="w-9 h-9 rounded-lg object-contain shrink-0"
             />
             {!collapsed && (
               <div className="min-w-0">
@@ -163,7 +162,8 @@ export default function AdminSidebar({
           {onMobileClose && (
             <button
               onClick={onMobileClose}
-              className="lg:hidden w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/[0.05] text-neutral-500 hover:text-neutral-900 dark:hover:text-white flex items-center justify-center"
+              aria-label="Tutup Menu"
+              className="lg:hidden w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/[0.05] text-neutral-500 hover:text-neutral-900 dark:hover:text-white flex items-center justify-center"
             >
               <X size={16} />
             </button>
@@ -172,7 +172,7 @@ export default function AdminSidebar({
 
         {/* Store Status iOS Switch (hidden in narrow mode) */}
         {!collapsed && (
-          <div className="px-4 py-3.5 border-b border-slate-200/70 dark:border-white/[0.06]">
+          <div className="px-4 py-3 border-b border-slate-200/70 dark:border-white/[0.06]">
             <InteractiveStoreStatusToggle />
           </div>
         )}
@@ -206,12 +206,12 @@ export default function AdminSidebar({
                       onClick={onMobileClose}
                       title={collapsed ? item.label : undefined}
                       className={cn(
-                        'flex items-center rounded-xl text-xs font-semibold transition-all duration-150 active:scale-[0.98]',
+                        'flex items-center rounded-lg text-xs font-semibold transition-colors duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600',
                         collapsed
                           ? 'justify-center p-2.5'
                           : 'justify-between px-3.5 py-2.5',
                         isActive
-                          ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
+                          ? 'bg-brand-600 text-white shadow-xs'
                           : 'text-neutral-600 dark:text-neutral-400 hover:bg-slate-100 dark:hover:bg-white/[0.04] hover:text-neutral-900 dark:hover:text-white'
                       )}
                     >
@@ -228,12 +228,14 @@ export default function AdminSidebar({
                         {!collapsed && <span className="truncate">{item.label}</span>}
                       </div>
                       {!collapsed && showBadge && (
-                        <span className={cn(
-                          'min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-extrabold flex items-center justify-center animate-pulse',
-                          isActive
-                            ? 'bg-white text-blue-600'
-                            : 'bg-rose-500 text-white shadow-sm'
-                        )}>
+                        <span
+                          className={cn(
+                            'min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-extrabold flex items-center justify-center tabular-nums',
+                            isActive
+                              ? 'bg-white text-brand-600'
+                              : 'bg-rose-500 text-white shadow-xs'
+                          )}
+                        >
                           {pendingCount > 9 ? '9+' : pendingCount}
                         </span>
                       )}
@@ -241,7 +243,7 @@ export default function AdminSidebar({
                         <ChevronRight size={14} className="text-white/70" />
                       )}
                       {collapsed && showBadge && (
-                        <span className="absolute ml-7 -mt-5 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-extrabold rounded-full ring-2 ring-white dark:ring-[#0b0d12] flex items-center justify-center animate-pulse">
+                        <span className="absolute ml-7 -mt-5 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-extrabold rounded-full ring-2 ring-white dark:ring-[#0b0d12] flex items-center justify-center tabular-nums">
                           {pendingCount > 9 ? '9+' : pendingCount}
                         </span>
                       )}
@@ -262,7 +264,7 @@ export default function AdminSidebar({
             onClick={onToggleCollapse}
             title={collapsed ? 'Perluas Sidebar' : 'Kecilkan Sidebar'}
             className={cn(
-              'hidden lg:flex items-center rounded-xl text-xs font-semibold text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/[0.05] transition-all w-full',
+              'hidden lg:flex items-center rounded-lg text-xs font-semibold text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/[0.05] transition-colors w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600',
               collapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2'
             )}
           >
@@ -276,7 +278,7 @@ export default function AdminSidebar({
           target="_blank"
           title={collapsed ? 'Lihat Web Customer' : undefined}
           className={cn(
-            'flex items-center text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/[0.05] hover:text-neutral-900 dark:hover:text-white rounded-xl transition-all',
+            'flex items-center text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/[0.05] hover:text-neutral-900 dark:hover:text-white rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600',
             collapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2'
           )}
         >
@@ -287,7 +289,7 @@ export default function AdminSidebar({
           onClick={handleLogout}
           title={collapsed ? 'Keluar' : undefined}
           className={cn(
-            'w-full flex items-center text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all',
+            'w-full flex items-center text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500',
             collapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2'
           )}
         >
@@ -303,7 +305,7 @@ export default function AdminSidebar({
       {/* Desktop Sidebar (Collapsible width) */}
       <aside
         className={cn(
-          'hidden lg:flex flex-col shrink-0 min-h-screen bg-white dark:bg-[#0b0d12] border-r border-slate-200/80 dark:border-white/[0.08] transition-all duration-300',
+          'hidden lg:flex flex-col shrink-0 min-h-screen bg-white dark:bg-[#0b0d12] border-r border-slate-200/80 dark:border-white/[0.08] transition-all duration-200',
           collapsed ? 'w-20' : 'w-64'
         )}
       >
@@ -314,10 +316,10 @@ export default function AdminSidebar({
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+            className="fixed inset-0 bg-black/50 transition-opacity"
             onClick={onMobileClose}
           />
-          <aside className="fixed inset-y-0 left-0 w-72 bg-white dark:bg-[#0b0d12] border-r border-slate-200 dark:border-white/[0.08] shadow-2xl z-50 animate-in slide-in-from-left duration-200">
+          <aside className="fixed inset-y-0 left-0 w-72 bg-white dark:bg-[#0b0d12] border-r border-slate-200 dark:border-white/[0.08] shadow-lg z-50 animate-in slide-in-from-left duration-200">
             {sidebarContent}
           </aside>
         </div>
@@ -342,11 +344,11 @@ function InteractiveStoreStatusToggle() {
   };
 
   return (
-    <div className="flex items-center justify-between p-2 rounded-2xl bg-slate-100/80 dark:bg-white/[0.04] border border-slate-200/60 dark:border-white/[0.06]">
+    <div className="flex items-center justify-between p-2 rounded-lg bg-slate-100/80 dark:bg-white/[0.04] border border-slate-200/60 dark:border-white/[0.06]">
       <div className="flex items-center gap-2">
         <div
           className={cn(
-            'w-6 h-6 rounded-lg flex items-center justify-center transition-colors',
+            'w-6 h-6 rounded-md flex items-center justify-center transition-colors',
             isOpen
               ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
               : 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
@@ -373,17 +375,17 @@ function InteractiveStoreStatusToggle() {
         type="button"
         role="switch"
         aria-checked={isOpen}
+        aria-label="Status buka toko"
         disabled={updating}
         onClick={handleToggle}
         className={cn(
-          'relative inline-flex h-4 w-8 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50',
+          'relative inline-flex h-4 w-8 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-150 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:opacity-50',
           isOpen ? 'bg-emerald-500' : 'bg-neutral-400 dark:bg-neutral-600'
         )}
       >
-        <span className="sr-only">Toggle Status Toko</span>
         <span
           className={cn(
-            'pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out',
+            'pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-xs ring-0 transition duration-150 ease-in-out',
             isOpen ? 'translate-x-4' : 'translate-x-0'
           )}
         />

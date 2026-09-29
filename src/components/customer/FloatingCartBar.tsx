@@ -19,10 +19,10 @@ export default function FloatingCartBar() {
     <div className="fixed bottom-5 inset-x-0 z-40 px-4 flex justify-center pointer-events-none animate-in fade-in slide-in-from-bottom-5 duration-200">
       <Link
         href="/keranjang"
-        className="pointer-events-auto max-w-md w-full bg-neutral-900/90 dark:bg-white/95 text-white dark:text-neutral-900 backdrop-blur-2xl rounded-2xl p-3.5 px-5 shadow-2xl shadow-blue-500/20 border border-white/20 dark:border-neutral-800 flex items-center justify-between gap-3 group hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+        className="pointer-events-auto max-w-md w-full bg-neutral-900/95 dark:bg-white/95 text-white dark:text-neutral-900 rounded-xl p-3.5 px-5 shadow-lg border border-white/10 dark:border-neutral-800 flex items-center justify-between gap-3 group hover:bg-neutral-800 dark:hover:bg-white active:scale-[0.98] transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2"
       >
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+          <div className="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center font-bold text-xs">
             <ShoppingBag size={16} />
           </div>
           <div className="flex flex-col text-left">
@@ -36,10 +36,10 @@ export default function FloatingCartBar() {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="font-heading font-extrabold text-sm tracking-tight text-white dark:text-neutral-900">
+          <span className="font-heading font-extrabold text-sm tracking-tight tabular-nums">
             {formatRupiah(subtotal)}
           </span>
-          <div className="w-6 h-6 rounded-full bg-white/10 dark:bg-neutral-900/10 flex items-center justify-center group-hover:translate-x-0.5 transition-transform">
+          <div className="w-6 h-6 rounded-full bg-white/10 dark:bg-neutral-900/10 flex items-center justify-center transition-transform duration-150 group-hover:translate-x-0.5">
             <ArrowRight size={13} />
           </div>
         </div>
